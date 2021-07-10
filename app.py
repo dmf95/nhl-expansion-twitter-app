@@ -10,7 +10,7 @@
 #--------------------------------------------------
 import streamlit as st
 from PIL import Image
-from apps import readme, nhl_exp_app ,fans, insiders, teams
+from pages import readme, nhl_exp_app ,fans, insiders, teams
 from app_multipage import multi_app # import your app modules here
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-
 

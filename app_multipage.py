@@ -1,3 +1,6 @@
+# Reference: https://www.youtube.com/watch?v=nSw96qUbK9o&t=194s&ab_channel=DataProfessor
+# Reference: https://towardsdatascience.com/creating-multipage-applications-using-streamlit-efficiently-b58a58134030
+
 """Frameworks for running multiple Streamlit applications as a single app.
 """
 import streamlit as st
@@ -22,7 +25,7 @@ class multi_app:
         app.run()
     """
     def __init__(self):
-        self.apps = []
+        self.pages = []
 
     def add_app(self, title, func):
         """Adds a new application.
@@ -33,7 +36,7 @@ class multi_app:
         title:
             title of the app. Appears in the dropdown in the sidebar.
         """
-        self.apps.append({
+        self.pages.append({
             "title": title,
             "function": func
         })
@@ -42,7 +45,7 @@ class multi_app:
         # app = st.sidebar.radio(
         app = st.sidebar.selectbox(
             'Choose a page',
-            self.apps,
+            self.pages,
             format_func=lambda app: app['title'])
 
         app['function']()

@@ -5,7 +5,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 
 def app():
-    st.title('Model')
+    st.title('Teams View')
 
     st.write('This is the `Model` page of the multi-page app.')
 

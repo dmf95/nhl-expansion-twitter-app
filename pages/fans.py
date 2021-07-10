@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn import datasets
 
 def app():
-    st.title('Data')
+    st.title('Fans View')
 
     st.write("This is the `Data` page of the multi-page app.")
 
