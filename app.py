@@ -33,7 +33,7 @@ col1, col2 = st.beta_columns((2,1)) # col1 is 2x greater than col2
 
 ## 2.1.2: Main Title/Logo
 ##----------------------------------##
-image = Image.open('nhl_app_logo.png') #logo
+image = Image.open('assets/nhl_app_logo.png') #logo
 st.image(image, width = 350) #logo width
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-
 
