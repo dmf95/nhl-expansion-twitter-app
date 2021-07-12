@@ -638,3 +638,53 @@ def print_lda_keywords_weight(data, number_of_topics):
         st.warning('**Theme #**' + str(topic_num) + '**:** ' + list_topic_words_weight)
         # increments topic number by 1 so that each theme printed out will have a new number
         topic_num += 1
+
+# Function 20
+#----------------
+# Function to create dataframe of most recent 3240 tweets from a specific user
+def get_user_tweets(screen_name):
+    #Twitter only allows access to a users most recent 3240 tweets with this method
+    #Adapted by: https://gist.github.com/yanofsky/5436496?fbclid=IwAR12gb56FOxTNI6R3SfiwpnbPpTvKLoeGR3kP0peQ1nGilcwsF8bR0LSVqE
+    
+    # Set up Twitter API access
+    # Define access keys and tokens
+    consumer_key = st.secrets['consumer_key']
+    consumer_secret = st.secrets['consumer_secret']
+    access_token = st.secrets['access_token']
+    access_token_secret = st.secrets['access_token_secret']
+
+    auth = tw.OAuthHandler(consumer_key, consumer_secret)
+    auth.set_access_token(access_token, access_token_secret)
+    api = tw.API(auth, wait_on_rate_limit = True)
+
+    #initialize a list to hold all the tweepy Tweets
+    alltweets = []  
+    
+    #make initial request for most recent tweets (200 is the maximum allowed count)
+    new_tweets = api.user_timeline(screen_name = screen_name,count=200)
+    
+    #save most recent tweets
+    alltweets.extend(new_tweets)
+    
+    #save the id of the oldest tweet less one
+    oldest = alltweets[-1].id - 1
+    
+    #keep grabbing tweets until there are no tweets left to grab
+    while len(new_tweets) > 0:
+        
+        #all subsiquent requests use the max_id param to prevent duplicates
+        new_tweets = api.user_timeline(screen_name = screen_name,count=200,max_id=oldest)
+        
+        #save most recent tweets
+        alltweets.extend(new_tweets)
+        
+        #update the id of the oldest tweet less one
+        oldest = alltweets[-1].id - 1
+    
+    #transform the tweepy tweets into a 2D array that will populate the csv 
+    outtweets = [[tweet.id_str, tweet.created_at, tweet.text, tweet.retweet_count, tweet.favorite_count] for tweet in alltweets]
+
+    #transform 2D array into pandas dataframe
+    df_tweets = pd.DataFrame(data=outtweets, columns=['id_str', 'created_at', 'text', 'rt_count', 'fav_count'])
+
+    return df_tweets
