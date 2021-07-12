@@ -148,7 +148,7 @@ def classify_nhl_team(df):
     accounts = pd.read_csv('assets/nhl_app_accounts.csv')
 
     # if team is kraken, then kraken else rest of league
-    teams['expansion_type'] = np.where(teams.nhl_team.str.contains("Kraken"), "Kraken", "Rest of League")
+    #teams['expansion_type'] = np.where(teams.nhl_team.str.contains("Kraken"), "Kraken", "Rest of League")
 
     # Create a new and smaller dataframe to work with called df
     df = df[["id", "user", "created_at", "full_text", "clean_text"]]
@@ -199,6 +199,8 @@ def classify_nhl_team(df):
     # ind variable - if the length of teams_concat is equal to 0 (proxy for no teams matched), then 1 else 0
     df['no_matches'] = np.where(df.teams_concat.str.len() == 0, 1, 0)
 
+    # Stash a dataframe with those tweets that were paired with a keyword
+    df_match = df.loc[df['no_matches'] != 1]
     # Stash a dataframe with those tweets that were never paired to a keyword 
     df_nomatch = df.loc[df['no_matches'] == 1]
     # Select columns
@@ -232,7 +234,7 @@ def classify_nhl_team(df):
                         how = 'left',
                         indicator = True)
 
-    return df_merged
+    return df_merged, df, df_match, df_nomatch
 
 
 
@@ -289,6 +291,10 @@ def round1_text_clean(text):
     text = re.sub(r'https\:\/\/t\.co\/*\w*', '', text) # remove https links
     text = re.sub('[%s]' % re.escape(string.punctuation), '', text) # removes punctuation
     text = re.sub('\[.*?\]', '', text) # removes text in square brackets
+    text = text.replace("’s", '') # replace apostrophes with empty string
+    text = text.replace("'s", '') # replace apostrophes with empty string
+    text = text.replace("’t", '') # replace apostrophes with empty string
+    text = text.replace("'t", '') # replace apostrophes with empty string
     #text = re.sub('\w*\d\w*', '', text) # remove whole word if starts with number
     #text = re.sub(r'(\s)#\w+', '', text) # remove whole word if starts with #
     text = text.strip() # strip text
