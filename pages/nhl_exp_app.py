@@ -37,6 +37,7 @@ def app():
     ## 2.1.1: Sidebar Title
     ##----------------------------------##
     st.sidebar.header('Choose Search Inputs') #sidebar title
+    
 
     ## 2.2.2: Sidebar Input Fields
     ##----------------------------------##
@@ -131,7 +132,7 @@ def app():
     text_sentiment = nf.sentiment_classifier(df_tweets, 'compound_score')
 
     # Select columns to output
-    df_sentiment = df_tweets[['created_at', 'full_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
+    df_sentiment = text_sentiment[['created_at', 'full_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
 
     # Sentiment group dataframe
     sentiment_group = df_sentiment.groupby('sentiment').agg({'sentiment': 'count'}).transpose()

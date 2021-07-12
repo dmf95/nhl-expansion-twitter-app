@@ -136,7 +136,109 @@ def twitter_get(select_hashtag_keyword, select_language, user_word_entry, num_of
 
     return df_tweets, df_new
 
-# Function 3
+# Function 3: 
+#----------------
+# takes in pandas dataframe after first twitter scrape
+# returns a pandas dataframe that has classified each tweet as relating to an nhl team
+
+def classify_nhl_team(df):
+    
+    #Read in teams & accounts CSVs
+    teams = pd.read_csv('assets/nhl_app_teams.csv')
+    accounts = pd.read_csv('assets/nhl_app_accounts.csv')
+
+    # if team is kraken, then kraken else rest of league
+    #teams['expansion_type'] = np.where(teams.nhl_team.str.contains("Kraken"), "Kraken", "Rest of League")
+
+    # Create a new and smaller dataframe to work with called df
+    df = df[["id", "user", "created_at", "full_text", "clean_text"]]
+    # Convert tweet to lower
+    df.clean_text = df.clean_text.str.lower()  
+    # Classification: If a team's keywords come up, classify as a team specific indicator, with value = team name
+    df['ANA'] = pd.np.where(df['clean_text'].str.contains('anaheim|ducks|#flytogether'), 'Anaheim Ducks', '0')
+    df['ARZ'] = pd.np.where(df['clean_text'].str.contains('arizona|coyotes|#yotes'), 'Arizona Coyotes', '0')
+    df['BOS'] = pd.np.where(df['clean_text'].str.contains('boston|bruins|#nhlbruins'), 'Boston Bruins', '0')
+    df['BUF'] = pd.np.where(df['clean_text'].str.contains('buffalo|sabres|#letsgobuffalo'), 'Buffalo Sabres', '0')
+    df['CGY'] = pd.np.where(df['clean_text'].str.contains('calgary|flames|#cofred'), 'Calgary Flames', '0')
+    df['CAR'] = pd.np.where(df['clean_text'].str.contains('carolina|hurricanes|#canes|#letsgocanes'), 'Carolina Hurricanes', '0')
+    df['CHI'] = pd.np.where(df['clean_text'].str.contains('chicago|blackhawks|#blackhawks'), 'Chicago Blackhawks', '0')
+    df['COL'] = pd.np.where(df['clean_text'].str.contains('colorado|avalanche|#GoAvsGo'), 'Colorado Avalanche', '0')
+    df['CBJ'] = pd.np.where(df['clean_text'].str.contains('columbus|bluejackets|jackets|#CBJ'), 'Columbus Blue Jackets', '0')
+    df['DAL'] = pd.np.where(df['clean_text'].str.contains('dallas|stars|#gostars'), 'Dallas Stars', '0')
+    df['DET'] = pd.np.where(df['clean_text'].str.contains('detroit|redwings|#lgrw'), 'Detroit Red Wings', '0')
+    df['EDM'] = pd.np.where(df['clean_text'].str.contains('edmonton|oilers|#oilers'), 'Edmonton Oilers', '0')
+    df['FLA'] = pd.np.where(df['clean_text'].str.contains('florida|panthers|#flapanthers'), 'Florida Panthers', '0')
+    df['LAK'] = pd.np.where(df['clean_text'].str.contains('los angeles|kings|#gokingsgo'), 'Los Angeles Kings', '0')
+    df['MIN'] = pd.np.where(df['clean_text'].str.contains('minnesota|wild|#mnwild'), 'Minnesota Wild', '0')
+    df['MTL'] = pd.np.where(df['clean_text'].str.contains('montreal|canadiens|habs|#gohabsgo'), 'Montreal Canadiens', '0')
+    df['NSH'] = pd.np.where(df['clean_text'].str.contains('nashville|predators|#preds'), 'Nashville Predators', '0')
+    df['NJD'] = pd.np.where(df['clean_text'].str.contains('new jersey|devils|#njdevils'), 'New Jersey Devils', '0')
+    df['NYI'] = pd.np.where(df['clean_text'].str.contains('new york islanders|islanders|#isles'), 'New York Islanders', '0')
+    df['NYR'] = pd.np.where(df['clean_text'].str.contains('new york rangers|rangers|#nyr'), 'New York Rangers', '0')
+    df['OTT'] = pd.np.where(df['clean_text'].str.contains('ottawa|senators|sens|#gosensgo'), 'Ottawa Senators', '0')
+    df['PHI'] = pd.np.where(df['clean_text'].str.contains('philadelphia|flyers|#anytimeanywhere'), 'Philadelphia Flyers', '0')
+    df['PIT'] = pd.np.where(df['clean_text'].str.contains('pittsburgh|penguins|#pens|#letsgopens'), 'Pittsburgh Penguins', '0')
+    df['SJS'] = pd.np.where(df['clean_text'].str.contains('san jose|sharks|#sjsharks'), 'San Jose Sharks', '0')
+    df['SEA'] = pd.np.where(df['clean_text'].str.contains('seattle|kraken|#seakraken'), 'Seattle Kraken', '0')
+    df['STL'] = pd.np.where(df['clean_text'].str.contains('stlouis|st. louis|st louis|blues|#stblues'), 'St Louis Blues', '0')
+    df['TBL'] = pd.np.where(df['clean_text'].str.contains('tampa bay|lightning|tampa|#gobolts'), 'Tampa Bay Lightning', '0')
+    df['TOR'] = pd.np.where(df['clean_text'].str.contains('toronto|maple leafs|#leafsforever'), 'Toronto Maple Leafs', '0')
+    df['VAN'] = pd.np.where(df['clean_text'].str.contains('vancouver|canucks|#canucks'), 'Vancouver Canucks', '0') 
+    df['VGK'] = pd.np.where(df['clean_text'].str.contains('vegas|golden knights|knights|#vegasborn'), 'Vegas Golden Knights', '0')
+    df['WSH'] = pd.np.where(df['clean_text'].str.contains('washington|capitals|#caps|#allcaps'), 'Washington Capitals', '0')
+    df['WPG'] = pd.np.where(df['clean_text'].str.contains('winnipeg|jets|#gojetsgo'), 'Winnipeg Jets', '0')
+
+    # Define columns to concatenate
+    cols = ['ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'SEA', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
+    # Concatenate columns
+    df['teams_concat'] = df[cols].apply(lambda x: ','.join(x), axis=1)
+    # Replace 0s with nothing
+    df['teams_concat'] = df.teams_concat.str.replace('0,|0|,0','').str.strip()
+    # ind variable - if multiple commas exist (proxy for num of teams), then 1 else 0
+    df['multiple_teams'] = np.where(df.teams_concat.str.contains(","), 1, 0)
+    # ind variable - if the length of teams_concat is equal to 0 (proxy for no teams matched), then 1 else 0
+    df['no_matches'] = np.where(df.teams_concat.str.len() == 0, 1, 0)
+
+    # Stash a dataframe with those tweets that were paired with a keyword
+    df_match = df.loc[df['no_matches'] != 1]
+    # Stash a dataframe with those tweets that were never paired to a keyword 
+    df_nomatch = df.loc[df['no_matches'] == 1]
+    # Select columns
+    df_nomatch = df_nomatch[['id', 'user', 'created_at', 'full_text', 'clean_text', 'multiple_teams', 'no_matches', 'teams_concat']]
+
+    # Melt the dataframe such that each row is equal to a tweet that was matched to a team's keyword (introducing dups to tweets)
+    melted_df = df.melt(
+                    id_vars = ['id', 'user', 'created_at', 'full_text', 'clean_text', 'multiple_teams', 'no_matches', 'teams_concat'],
+                    value_vars = ['ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'SEA', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG'],
+                    var_name = 'nhl_team_abbr',
+                    value_name = "nhl_team"
+                    )
+    # Filter out 0s 
+    melted_df = melted_df.loc[melted_df['nhl_team'] != '0']
+
+    # Add feature parity to df_nomatch
+    df_nomatch['nhl_team_abbr'] = 'Unknown' 
+    df_nomatch['nhl_team'] = 'Unknown' 
+
+    # Append df_nomatch to melted_df to get df_clean
+    df_clean = melted_df.append(df_nomatch)
+
+    # Show a few rows of data
+    df_clean.head(5)
+    #print('total rows:', len(df_clean),'melted_rows:', (len(melted_df)), 'nomatch_rows:', len(df_nomatch))
+
+    # Extend df_clean by joining in data about the team
+    df_merged = pd.merge(df_clean,
+                        teams,
+                        on = 'nhl_team',
+                        how = 'left',
+                        indicator = True)
+
+    return df_merged, df, df_match, df_nomatch
+
+
+
+# Function 4
 #-----------------
 def feature_extract(df):
     #TODO: add emoticons and emojis to this! and other punctuation
@@ -158,7 +260,7 @@ def feature_extract(df):
     df['uppercase_ct'] = df.full_text.apply(lambda x: len([x for x in x.split() if x.isupper()]))
     return df
 
-# Function 4a
+# Function 5a
 #-------------
 def round1_text_clean(text):
     emoji_pattern = re.compile("["
@@ -189,16 +291,20 @@ def round1_text_clean(text):
     text = re.sub(r'https\:\/\/t\.co\/*\w*', '', text) # remove https links
     text = re.sub('[%s]' % re.escape(string.punctuation), '', text) # removes punctuation
     text = re.sub('\[.*?\]', '', text) # removes text in square brackets
+    text = text.replace("’s", '') # replace apostrophes with empty string
+    text = text.replace("'s", '') # replace apostrophes with empty string
+    text = text.replace("’t", '') # replace apostrophes with empty string
+    text = text.replace("'t", '') # replace apostrophes with empty string
     #text = re.sub('\w*\d\w*', '', text) # remove whole word if starts with number
     #text = re.sub(r'(\s)#\w+', '', text) # remove whole word if starts with #
     text = text.strip() # strip text
     return text
 
-# Function 4b
+# Function 5b
 #-------------
 text_clean_round1 = lambda x: round1_text_clean(x)
 
-# Function 5
+# Function 6
 #-------------
 def text_clean_round2(text):
     """
@@ -215,7 +321,7 @@ def text_clean_round2(text):
     words = re.sub(r'[^\w\s]', '', text).split()
     return [wnl.lemmatize(word) for word in words if word not in stopwords]
 
-# Function 6
+# Function 7
 #-------------
 def text_clean_round3(text):
     #TODO: add emoticons and emojis to this!
@@ -227,7 +333,7 @@ def text_clean_round3(text):
     text = text.apply(lambda x: " ".join(x for x in x.split() if x not in stopwords))
     return text
 
-# Function 7a
+# Function 8a
 #-----------------
 def tweets_ngrams(n, top_n, df):
     """
@@ -240,7 +346,7 @@ def tweets_ngrams(n, top_n, df):
     result = (pd.Series(data = nltk.ngrams(words, n), name = 'frequency').value_counts())[:top_n]
     return result.to_frame()
 
-# Function 7b
+# Function 8b
 #-----------------
 def all_ngrams(top_n, df):
     text = df.clean_text
@@ -255,14 +361,14 @@ def all_ngrams(top_n, df):
     result['ngram_nm'] = result.index
     return result
 
-# Function 8
+# Function 9
 #----------------
 
 # Credit: https://jackmckew.dev/sentiment-analysis-text-cleaning-in-python-with-vader.html
 sid_analyzer = SentimentIntensityAnalyzer()
 
 # Get sentiment
-def get_sentiment(text:str, analyser,desired_type:str='pos'):
+def get_sentiment(text:str, analyser, desired_type:str='pos'):
     # Get sentiment from text
     sentiment_score = analyser.polarity_scores(text)
     return sentiment_score[desired_type]
@@ -275,7 +381,7 @@ def get_sentiment_scores(df, data_column):
     df[f'compound_score'] = df[data_column].astype(str).apply(lambda x: get_sentiment(x,sid_analyzer,'compound'))
     return df
 
-# Function 9
+# Function 10
 #----------------
 # Credit: https://www.dataquest.io/blog/tutorial-add-column-pandas-dataframe-based-on-if-else-condition/
 
@@ -296,7 +402,7 @@ def sentiment_classifier(df, data_column):
     df['sentiment'] = np.select(condlist = conditions, choicelist = values)
     return df
 
-# Function 10
+# Function 11
 #----------------
 
 # Credit: https://ourcodingclub.github.io/tutorials/topic-modelling-python/
@@ -327,7 +433,7 @@ def lda_topics(data, number_of_topics, no_top_words, min_df, max_df):
     return pd.DataFrame(topic_df)
 
 
-# Function 11
+# Function 12
 #----------------
 # Credit: https://ourcodingclub.github.io/tutorials/topic-modelling-python/
 
@@ -341,7 +447,7 @@ def display_topics(model, feature_names, no_top_words):
     return pd.DataFrame(topic_dict)
 
 
-# Function 12
+# Function 13
 #---------------
 def sent_to_words(sentences):
     for sentence in sentences:
@@ -385,7 +491,7 @@ def LDA_viz(data):
     
     return LDAvis_prepared
 
-# Function 13
+# Function 14
 #----------------
 # Credit: https://jackmckew.dev/sentiment-analysis-text-cleaning-in-python-with-vader.html
 
@@ -397,7 +503,7 @@ def print_top_n_tweets(df, sent_type, num_rows):
     top_tweets.index = top_tweets.index + 1 
     return top_tweets
 
-# Function 14
+# Function 15
 #----------------
 # Function to convert  
 def word_cloud_all(df, wordcloud_words): 
@@ -412,7 +518,7 @@ def word_cloud_all(df, wordcloud_words):
     wordcloud = WordCloud(max_font_size=80, max_words=wordcloud_words, background_color="white", height=100).generate(str2)
     return wordcloud
 
-# Function 15
+# Function 16
 #----------------
 # Function to convert  
 def word_cloud_sentiment(df, sent_type, num_rows, wordcloud_words): 
@@ -429,7 +535,7 @@ def word_cloud_sentiment(df, sent_type, num_rows, wordcloud_words):
     wordcloud = WordCloud(max_font_size=100, max_words=wordcloud_words, background_color="white").generate(str2)
     return wordcloud
 
-# Function 16
+# Function 17
 #----------------
 # Function to plot default wordcloud
 def default_wordcloud(text_sentiment):
@@ -458,7 +564,7 @@ def default_wordcloud(text_sentiment):
     
     return 
 
-# Function 16
+# Function 18
 #----------------
 # Function to plot wordcloud that changes
 def plot_wordcloud(submitted2, score_type, text_sentiment, wordcloud_words, top_n_tweets):
@@ -503,7 +609,7 @@ def plot_wordcloud(submitted2, score_type, text_sentiment, wordcloud_words, top_
     
     return 
 
-# Function 17a
+# Function 19a
 #----------------
 # Function to display topics and related keywords
 def print_lda_keywords(data, number_of_topics):
@@ -518,7 +624,7 @@ def print_lda_keywords(data, number_of_topics):
         # increments topic number by 1 so that each theme printed out will have a new number
         topic_num += 1
 
-# Function 17b
+# Function 19b
 #----------------
 # Function to display topics, related keywords, and weights
 def print_lda_keywords_weight(data, number_of_topics):
