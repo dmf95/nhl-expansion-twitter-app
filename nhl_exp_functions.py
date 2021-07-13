@@ -684,9 +684,39 @@ def get_user_tweets(screen_name):
         i +=1
     
     #transform the tweepy tweets into a 2D array that will populate the csv 
-    outtweets = [[tweet.id_str, tweet.created_at, tweet.text, tweet.retweet_count, tweet.favorite_count, tweet.user.verified] for tweet in alltweets]
+    outtweets = [[tweet.user.screen_name, tweet.id_str, tweet.created_at, tweet.text, tweet.retweet_count, tweet.favorite_count] for tweet in alltweets]
 
     #transform 2D array into pandas dataframe
-    df_tweets = pd.DataFrame(data=outtweets, columns=['id_str', 'created_at', 'text', 'rt_count', 'fav_count', 'user_verified'])
+    df_tweets = pd.DataFrame(data=outtweets, columns=['user', 'id', 'created_at', 'full_text', 'rt_count', 'fav_count'])
 
     return df_tweets
+
+
+# Function 21
+#----------------
+# Return recent tweets for list of Twitter accounts specified in /assets/nhl_app_accounts.csv
+def insider_recent_tweets():
+
+    # Get list of Twitter accounts
+    df_accounts = pd.read_csv('assets/nhl_app_accounts.csv')
+
+    # Remove @ from username
+    df_accounts['clean_account_ids'] = df_accounts['account_id'].str.replace("@", "")
+
+    # Create list of accounts
+    list_accounts = df_accounts['clean_account_ids'].tolist()
+
+    # Create empty dataframe to append tweets in the for loop below
+    df_user_tweets = pd.DataFrame()
+
+    # Iterates through list of accounts, gets most recents tweets for each account, and appends to dataframe
+    for i in range(len(list_accounts)):
+        # Uses function 20 to get tweets for each account
+        new_user_tweets = get_user_tweets(list_accounts[i])
+        # Append tweets to dataframe
+        df_user_tweets = df_user_tweets.append(new_user_tweets)
+
+    # Reset dataframe index
+    df_user_tweets = df_user_tweets.reset_index(drop=True)
+
+    return df_user_tweets
