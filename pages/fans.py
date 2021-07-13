@@ -125,6 +125,7 @@ def app():
     team_group2 = df_sentiment.groupby(['nhl_team_abbr', 'nhl_team']).agg({'id': 'nunique', 'compound_score': ['mean', 'median', 'min', 'max']}).reset_index(level=[0,1])
     team_group2 = team_group2.loc[team_group2['nhl_team_abbr'] != 'Unknown']
 
+    # columns
     team_group2.columns = ['nhl_team_abbr', 'nhl_team', 'tweets', 'avg_compound_score', 'median_compound_score', 'min_compound_score', 'max_compound_score']    # rename
     expansion_group.columns = ['expansion_type', 'sentiment', 'tweets', 'avg_compound_score', 'median_compound_score', 'min_compound_score', 'max_compound_score']
     expansion_group2.columns = ['expansion_type',  'tweets', 'avg_compound_score', 'median_compound_score', 'min_compound_score', 'max_compound_score']
@@ -225,6 +226,8 @@ def app():
                         color=alt.condition(alt.datum.avg_compound_score > 0,
                             alt.value("#99D9D9"),  # The positive color
                             alt.value("E9072B"))  # The negative color
+                    ).transform_filter( # filters
+                            (alt.datum.expansion_type != 'Unknown')               
                     ).properties(
                         height = 400
                     ).interactive()
@@ -237,9 +240,9 @@ def app():
                         x = alt.X('avg_compound_score:Q', axis = alt.Axis(title = 'Average Compound Score')),
                         y = alt.Y('nhl_team_abbr:O', sort = '-x', axis = alt.Axis(title = 'NHL Team')),
                         tooltip = [alt.Tooltip('nhl_team:O', title = 'NHL Team'),alt.Tooltip('sum(tweets):Q', title = 'Number of Tweets'), alt.Tooltip('avg_compound_score', title = 'Average Score'), alt.Tooltip('median_compound_score', title = 'Median Score'),alt.Tooltip('min_compound_score', title = 'Worst Score'), alt.Tooltip('max_compound_score', title = 'Best Score')],
-                        color=alt.condition(alt.datum.avg_compound_score > 0,
-                            alt.value("#99D9D9"),  # The positive color
-                            alt.value("#E9072B"))  # The negative color
+                        color = alt.condition(alt.datum.avg_compound_score > 0,
+                                    alt.value("#99D9D9"),  # The positive color
+                                    alt.value("#E9072B"))  # The negative color                            
                     ).properties(
                         height = 400
                     ).interactive()
@@ -247,24 +250,6 @@ def app():
     # Write the chart
     col2.subheader('Tweet Sentiment by Team')
     col2.altair_chart(sentiment_bar, use_container_width=True)
-
-
-    # Altair chart: sentiment bart chart by day (by team color)
-    sentiment_team_bar = alt.Chart(df_sentiment).mark_bar().encode(
-                        x = alt.X('mean(compound_score):Q', axis = alt.Axis(title = 'Average Compound Score')),
-                        y = alt.Y('nhl_team_abbr:O', sort = '-x',axis = alt.Axis(title = 'NHL Team')),
-                        tooltip = ['count(id):Q', alt.Tooltip('average(compound_score)', title = 'Average Score'), alt.Tooltip('median(compound_score)', title = 'Median Score'),alt.Tooltip('min(compound_score)', title = 'Worst Score'), alt.Tooltip('max(compound_score)', title = 'Best Score')],
-                        color=alt.Color('nhl_team_abbr',
-                            scale=alt.Scale(
-                            domain=['ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'SEA', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG'],
-                            range=['#F47A38', '#8C2633', '#FFB81C', '#002654', '#C8102E', '#CC0000', '#CF0A2C', '#6F263D', '#002654', '#006847', '#CE1126', '#041E42', '#B9975B', '#111111', '#154734', '#AF1E2D', '#FFB81C', '#CE1126', '#00539B', '#0038A8', '#C52032', '#F74902', '#FCB514', '#006D75', '#99D9D9', '#002F87', '#002868', '#00205B', '#00205B', '#B4975A', '#C8102E', '#041E42']))
-                    ).properties(
-                        height = 400
-                    ).interactive()
-
-    # Write the chart
-    #col2.subheader('Classifying Tweet Sentiment by Team')
-    #col2.altair_chart(sentiment_team_bar, use_container_width=True)
     
 
     ## 4.2.3: Sentiment Expander Bar
@@ -276,8 +261,11 @@ def app():
     ##----------------------------------##
 
     # Histogram for VADER compound score
-    sentiment_histo= alt.Chart(df_sentiment).mark_bar().encode(
-                        x = alt.X('compound_score:O', axis = alt.Axis(title = 'VADER Compound Score (Binned)'), bin=alt.Bin(extent=[-1, 1], step=0.25)),
+
+    base = alt.Chart(df_sentiment)
+
+    sentiment_histo= base.mark_bar().encode(
+                        x = alt.X('compound_score:Q', axis = alt.Axis(title = 'VADER Compound Score'), bin=alt.Bin(extent=(-1, 1), maxbins=50)),
                         y = alt.Y('count(id):Q', axis = alt.Axis(title = 'Number of Tweets')),
                         tooltip = [alt.Tooltip('sentiment', title = 'Sentiment Group'), 'count(id):Q', alt.Tooltip('average(compound_score)', title = 'Average Compound Score'), alt.Tooltip('median(compound_score)', title = 'Median Compound Score')] ,
                         color=alt.Color('sentiment',
@@ -288,10 +276,12 @@ def app():
                         height = 400
                     ).interactive()
 
+
     # Write the chart
     sentiment_expander.subheader('Checking Sentiment Skewness')
     sentiment_expander.write('VADER Compound Scores Histogram')
     sentiment_expander.altair_chart(sentiment_histo, use_container_width=True)    
+
 
 
     ## 4.2.5: Summary Card Metrics
