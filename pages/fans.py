@@ -225,6 +225,8 @@ def app():
                         color=alt.condition(alt.datum.avg_compound_score > 0,
                             alt.value("#99D9D9"),  # The positive color
                             alt.value("E9072B"))  # The negative color
+                    ).transform_filter( # filters
+                            (alt.datum.expansion_type != 'Unknown')               
                     ).properties(
                         height = 400
                     ).interactive()
