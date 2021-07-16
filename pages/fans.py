@@ -45,7 +45,7 @@ def app():
     ##----------------------------------##
     st.title('NHL Fan-alyzer')
     st.markdown(    
-        '''Now that the [#SeaKraken](https://twitter.com/SeattleKraken "Seattle's Twitter Page") have had their time to strategize, its time to **find out how NHL fans around the world feel**'''
+        '''Now that the [#SeaKraken](https://twitter.com/SeattleKraken "Seattle's Twitter Page") have had their time to strategize, lets see **how NHL fans on Twitter feel**'''
     )
 
     #col1, col2 = st.beta_columns((1,1)) # 2 same sized columns

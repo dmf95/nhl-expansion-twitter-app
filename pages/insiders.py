@@ -23,12 +23,13 @@ import nhl_exp_functions as nf # custom functions file
 # 1.3: #TODO
 #------------------------------------#
 
-# 4.2.6 Violin chart
-# - To demonstrate skewness, would be cool to have a violin chart
-# - example: #https://github.com/altair-viz/altair/issues/2173
+# Filter RTs & replies from tweets
+# Filter tweets by date
+# User ability to filter by date, team, account, company, etc.
+# Remove max number of tweets in the form
+# Create a new function on success specific to this page
+# Review tweets
 
-# 4.5 Topic Model
-# - Data looks incorrect, #TODO review what is going on here
 
 
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~--=~-=~-=~-=~-=~-=~-
@@ -45,7 +46,7 @@ def app():
     ##----------------------------------##
     st.title('NHL Insiders Analyzer')
     st.markdown(    
-        '''Now that the [#SeaKraken](https://twitter.com/SeattleKraken "Seattle's Twitter Page") have had their time to strategize, its time to **find out how popular NHL Insiders around the world feel**'''
+        '''Now that the [#SeaKraken](https://twitter.com/SeattleKraken "Seattle's Twitter Page") have had their time to strategize, lets see **how some of our favorite NHL Insiders on Twitter feel**'''
     )
 
     #col1, col2 = st.beta_columns((1,1)) # 2 same sized columns
@@ -84,19 +85,21 @@ def app():
         with st.spinner('Gathering new inputs...'):
             time.sleep(3)
 
-    # Run function 2: Get twitter data 
-    df_tweets, df_new = nf.twitter_get_nhl(num_of_tweets)
+    # Run function 3: Get recent tweets for each insider account
+    df_tweets = nf.insider_recent_tweets()
 
-    # Run function 3: Get classified nhl teams data    
+    st.write(df_tweets)
+
+    # Run function 5: Get classified nhl teams data    
     df_nhl, df_original, df_match, df_nomatch = nf.classify_nhl_team(df_tweets)
 
-    # Run function #4: Feature extraction
+    # Run function #6: Feature extraction
     df_tweets = nf.feature_extract(df_tweets)
 
-    # Run function #5: Round 1 text cleaning (convert to lower, remove numbers, @, punctuation, numbers. etc.)
+    # Run function #7: Round 1 text cleaning (convert to lower, remove numbers, @, punctuation, numbers. etc.)
     df_tweets['clean_text'] = df_tweets.clean_text.apply(nf.text_clean_round1)
 
-    ## Run function #7: Round 3 text cleaning (remove stop words)
+    ## Run function #9: Round 3 text cleaning (remove stop words)
     df_tweets.clean_text  = nf.text_clean_round3(df_tweets.clean_text)
 
     #Read in teams & accounts CSVs

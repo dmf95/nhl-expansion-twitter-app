@@ -69,7 +69,7 @@ def get_table_download_link(df):
 # @st.cache(suppress_st_warning=True,allow_output_mutation=True)
 def twitter_get_nhl(num_of_tweets):  
     
-    with st.spinner('Getting twitter data...'):
+    with st.spinner('Getting NHL Expansion Draft data from Twitter...'):
 
         # Set up Twitter API access
         # Define access keys and tokens
@@ -126,7 +126,104 @@ def twitter_get_nhl(num_of_tweets):
     return df_tweets, df_new
 
 
-# Function 3: 
+# Function 3
+#----------------
+# Function to create dataframe of most recent 400 tweets from a specific user
+def get_user_tweets(screen_name):
+
+    with st.spinner('Getting NHL Insider data from Twitter...'):
+
+        #Twitter only allows access to a users most recent 3240 tweets with this method
+        #Adapted by: https://gist.github.com/yanofsky/5436496?fbclid=IwAR12gb56FOxTNI6R3SfiwpnbPpTvKLoeGR3kP0peQ1nGilcwsF8bR0LSVqE
+        
+        # Set up Twitter API access
+        # Define access keys and tokens
+        consumer_key = st.secrets['consumer_key']
+        consumer_secret = st.secrets['consumer_secret']
+        access_token = st.secrets['access_token']
+        access_token_secret = st.secrets['access_token_secret']
+
+        auth = tw.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        api = tw.API(auth, wait_on_rate_limit = True)
+
+        #initialize a list to hold all the tweepy Tweets
+        alltweets = []  
+        
+        #make initial request for most recent tweets (200 is the maximum allowed count)
+        new_tweets = api.user_timeline(screen_name = screen_name,count=200)
+        
+        #save most recent tweets
+        alltweets.extend(new_tweets)
+        
+        #save the id of the oldest tweet less one
+        oldest = alltweets[-1].id - 1
+        
+        #keep grabbing tweets until there are no tweets left to grab
+        #loop through twice (0 to 1) to get 400 tweets
+        for i in range(1):
+            
+            #all subsiquent requests use the max_id param to prevent duplicates
+            new_tweets = api.user_timeline(screen_name = screen_name,count=200,max_id=oldest)
+            
+            #save most recent tweets
+            alltweets.extend(new_tweets)
+            
+            #update the id of the oldest tweet less one
+            oldest = alltweets[-1].id - 1
+            i +=1
+        
+        #transform the tweepy tweets into a 2D array that will populate the csv 
+        outtweets = [[tweet.user.screen_name, tweet.id_str, tweet.created_at, tweet.text, tweet.retweet_count, tweet.favorite_count, tweet.user.followers_count, tweet.user.verified] for tweet in alltweets]
+
+        #transform 2D array into pandas dataframe
+        df_itweets = pd.DataFrame(data=outtweets, columns=['user', 'id', 'created_at', 'full_text', 'rt_count', 'fav_count', 'follower_ct', 'verified'])
+        
+        # Add a new data variable
+        #df_itweets['created_dt'] = df_itweets['created_at'].dt.date
+
+        # Add a new time variable
+        #df_itweets['created_time'] = df_itweets['created_at'].dt.time
+
+        # Create a new text variable to do manipulations on 
+        df_itweets['clean_text'] = df_itweets.full_text
+
+    return df_itweets
+
+
+# Function 4
+#----------------
+# Return recent tweets for list of Twitter accounts specified in /assets/nhl_app_accounts.csv
+def insider_recent_tweets():
+
+    # Get list of Twitter accounts
+    df_accounts = pd.read_csv('assets/nhl_app_accounts.csv')
+
+    # Remove @ from username
+    df_accounts['clean_account_ids'] = df_accounts['account_id'].str.replace("@", "")
+
+    # Create list of accounts
+    list_accounts = df_accounts['clean_account_ids'].tolist()
+
+    # Create empty dataframe to append tweets in the for loop below
+    df_user_tweets = pd.DataFrame()
+
+    # Iterates through list of accounts, gets most recents tweets for each account, and appends to dataframe
+    for i in range(len(list_accounts)):
+        # Uses function 20 to get tweets for each account
+        new_user_tweets = get_user_tweets(list_accounts[i])
+        # Append tweets to dataframe
+        df_user_tweets = df_user_tweets.append(new_user_tweets)
+
+    # Reset dataframe index
+    df_user_tweets = df_user_tweets.reset_index(drop=True)
+
+    return df_user_tweets
+
+
+
+
+# Function 5: 
 #----------------
 # takes in pandas dataframe after first twitter scrape
 # returns a pandas dataframe that has classified each tweet as relating to an nhl team
@@ -222,7 +319,7 @@ def classify_nhl_team(df):
 
 
 
-# Function 4
+# Function 6
 #-----------------
 def feature_extract(df):
     #TODO: add emoticons and emojis to this! and other punctuation
@@ -244,7 +341,7 @@ def feature_extract(df):
     df['uppercase_ct'] = df.full_text.apply(lambda x: len([x for x in x.split() if x.isupper()]))
     return df
 
-# Function 5a
+# Function 7a
 #-------------
 def round1_text_clean(text):
     emoji_pattern = re.compile("["
@@ -284,11 +381,11 @@ def round1_text_clean(text):
     text = text.strip() # strip text
     return text
 
-# Function 5b
+# Function 7b
 #-------------
 text_clean_round1 = lambda x: round1_text_clean(x)
 
-# Function 6
+# Function 8
 #-------------
 def text_clean_round2(text):
     """
@@ -305,7 +402,7 @@ def text_clean_round2(text):
     words = re.sub(r'[^\w\s]', '', text).split()
     return [wnl.lemmatize(word) for word in words if word not in stopwords]
 
-# Function 7
+# Function 9
 #-------------
 def text_clean_round3(text):
     #TODO: add emoticons and emojis to this!
@@ -317,7 +414,7 @@ def text_clean_round3(text):
     text = text.apply(lambda x: " ".join(x for x in x.split() if x not in stopwords))
     return text
 
-# Function 8a
+# Function 10a
 #-----------------
 def tweets_ngrams(n, top_n, df):
     """
@@ -330,7 +427,7 @@ def tweets_ngrams(n, top_n, df):
     result = (pd.Series(data = nltk.ngrams(words, n), name = 'frequency').value_counts())[:top_n]
     return result.to_frame()
 
-# Function 8b
+# Function 10b
 #-----------------
 def all_ngrams(top_n, df):
     text = df.clean_text
@@ -345,7 +442,7 @@ def all_ngrams(top_n, df):
     result['ngram_nm'] = result.index
     return result
 
-# Function 9
+# Function 11
 #----------------
 
 # Credit: https://jackmckew.dev/sentiment-analysis-text-cleaning-in-python-with-vader.html
@@ -365,7 +462,7 @@ def get_sentiment_scores(df, data_column):
     df[f'compound_score'] = df[data_column].astype(str).apply(lambda x: get_sentiment(x,sid_analyzer,'compound'))
     return df
 
-# Function 10
+# Function 12
 #----------------
 # Credit: https://www.dataquest.io/blog/tutorial-add-column-pandas-dataframe-based-on-if-else-condition/
 
@@ -386,7 +483,7 @@ def sentiment_classifier(df, data_column):
     df['sentiment'] = np.select(condlist = conditions, choicelist = values)
     return df
 
-# Function 11
+# Function 13
 #----------------
 
 # Credit: https://ourcodingclub.github.io/tutorials/topic-modelling-python/
@@ -418,7 +515,7 @@ def lda_topics(data, number_of_topics, no_top_words, min_df, max_df):
     return pd.DataFrame(topic_df)
 
 
-# Function 12
+# Function 14
 #----------------
 # Credit: https://ourcodingclub.github.io/tutorials/topic-modelling-python/
 
@@ -432,7 +529,7 @@ def display_topics(model, feature_names, no_top_words):
     return pd.DataFrame(topic_dict)
 
 
-# Function 13
+# Function 15
 #---------------
 def sent_to_words(sentences):
     for sentence in sentences:
@@ -476,7 +573,7 @@ def LDA_viz(data):
     
     return LDAvis_prepared
 
-# Function 14
+# Function 16
 #----------------
 # Credit: https://jackmckew.dev/sentiment-analysis-text-cleaning-in-python-with-vader.html
 
@@ -488,7 +585,7 @@ def print_top_n_tweets(df, sent_type, num_rows):
     top_tweets.index = top_tweets.index + 1 
     return top_tweets
 
-# Function 15
+# Function 17
 #----------------
 # Function to convert  
 def word_cloud_all(df, wordcloud_words): 
@@ -503,7 +600,7 @@ def word_cloud_all(df, wordcloud_words):
     wordcloud = WordCloud(max_font_size=80, max_words=wordcloud_words, background_color="white", height=100).generate(str2)
     return wordcloud
 
-# Function 16
+# Function 18
 #----------------
 # Function to convert  
 def word_cloud_sentiment(df, sent_type, num_rows, wordcloud_words): 
@@ -520,7 +617,7 @@ def word_cloud_sentiment(df, sent_type, num_rows, wordcloud_words):
     wordcloud = WordCloud(max_font_size=100, max_words=wordcloud_words, background_color="white").generate(str2)
     return wordcloud
 
-# Function 17
+# Function 19
 #----------------
 # Function to plot default wordcloud
 def default_wordcloud(text_sentiment):
@@ -549,7 +646,7 @@ def default_wordcloud(text_sentiment):
     
     return 
 
-# Function 18
+# Function 20
 #----------------
 # Function to plot wordcloud that changes
 def plot_wordcloud(submitted2, score_type, text_sentiment, wordcloud_words, top_n_tweets):
@@ -594,7 +691,7 @@ def plot_wordcloud(submitted2, score_type, text_sentiment, wordcloud_words, top_
     
     return 
 
-# Function 19a
+# Function 21a
 #----------------
 # Function to display topics and related keywords
 def print_lda_keywords(data, number_of_topics):
@@ -609,7 +706,7 @@ def print_lda_keywords(data, number_of_topics):
         # increments topic number by 1 so that each theme printed out will have a new number
         topic_num += 1
 
-# Function 19b
+# Function 21b
 #----------------
 # Function to display topics, related keywords, and weights
 def print_lda_keywords_weight(data, number_of_topics):
@@ -623,88 +720,6 @@ def print_lda_keywords_weight(data, number_of_topics):
         st.warning('**Theme #**' + str(topic_num) + '**:** ' + list_topic_words_weight)
         # increments topic number by 1 so that each theme printed out will have a new number
         topic_num += 1
-
-# Function 20
-#----------------
-# Function to create dataframe of most recent 400 tweets from a specific user
-def get_user_tweets(screen_name):
-    #Twitter only allows access to a users most recent 3240 tweets with this method
-    #Adapted by: https://gist.github.com/yanofsky/5436496?fbclid=IwAR12gb56FOxTNI6R3SfiwpnbPpTvKLoeGR3kP0peQ1nGilcwsF8bR0LSVqE
-    
-    # Set up Twitter API access
-    # Define access keys and tokens
-    consumer_key = st.secrets['consumer_key']
-    consumer_secret = st.secrets['consumer_secret']
-    access_token = st.secrets['access_token']
-    access_token_secret = st.secrets['access_token_secret']
-
-    auth = tw.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
-    api = tw.API(auth, wait_on_rate_limit = True)
-
-    #initialize a list to hold all the tweepy Tweets
-    alltweets = []  
-    
-    #make initial request for most recent tweets (200 is the maximum allowed count)
-    new_tweets = api.user_timeline(screen_name = screen_name,count=200)
-    
-    #save most recent tweets
-    alltweets.extend(new_tweets)
-    
-    #save the id of the oldest tweet less one
-    oldest = alltweets[-1].id - 1
-    
-    #keep grabbing tweets until there are no tweets left to grab
-    #loop through twice (0 to 1) to get 400 tweets
-    for i in range(1):
-        
-        #all subsiquent requests use the max_id param to prevent duplicates
-        new_tweets = api.user_timeline(screen_name = screen_name,count=200,max_id=oldest)
-        
-        #save most recent tweets
-        alltweets.extend(new_tweets)
-        
-        #update the id of the oldest tweet less one
-        oldest = alltweets[-1].id - 1
-        i +=1
-    
-    #transform the tweepy tweets into a 2D array that will populate the csv 
-    outtweets = [[tweet.user.screen_name, tweet.id_str, tweet.created_at, tweet.text, tweet.retweet_count, tweet.favorite_count] for tweet in alltweets]
-
-    #transform 2D array into pandas dataframe
-    df_tweets = pd.DataFrame(data=outtweets, columns=['user', 'id', 'created_at', 'full_text', 'rt_count', 'fav_count'])
-
-    return df_tweets
-
-
-# Function 21
-#----------------
-# Return recent tweets for list of Twitter accounts specified in /assets/nhl_app_accounts.csv
-def insider_recent_tweets():
-
-    # Get list of Twitter accounts
-    df_accounts = pd.read_csv('assets/nhl_app_accounts.csv')
-
-    # Remove @ from username
-    df_accounts['clean_account_ids'] = df_accounts['account_id'].str.replace("@", "")
-
-    # Create list of accounts
-    list_accounts = df_accounts['clean_account_ids'].tolist()
-
-    # Create empty dataframe to append tweets in the for loop below
-    df_user_tweets = pd.DataFrame()
-
-    # Iterates through list of accounts, gets most recents tweets for each account, and appends to dataframe
-    for i in range(len(list_accounts)):
-        # Uses function 20 to get tweets for each account
-        new_user_tweets = get_user_tweets(list_accounts[i])
-        # Append tweets to dataframe
-        df_user_tweets = df_user_tweets.append(new_user_tweets)
-
-    # Reset dataframe index
-    df_user_tweets = df_user_tweets.reset_index(drop=True)
-
-    return df_user_tweets
 
   
 # Function 22
