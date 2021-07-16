@@ -12,7 +12,6 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-from sklearn import datasets
 from streamlit_metrics import metric_row
 import altair as alt
 import time
@@ -44,21 +43,24 @@ def app():
 
     ## 2.1.1: Main Panel Title
     ##----------------------------------##
-    st.title('Fans View')
+    st.title('NHL Fan-alyzer')
+    st.markdown(    
+        '''Now that the [#SeaKraken](https://twitter.com/SeattleKraken "Seattle's Twitter Page") have had their time to strategize, its time to **find out how NHL fans around the world feel**'''
+    )
 
     #col1, col2 = st.beta_columns((1,1)) # 2 same sized columns
 
     ## 2.2.1: Sidebar Title
     ##----------------------------------##
+    st.sidebar.text("") # spacing
     st.sidebar.header('Advanced Search') #sidebar title
-    
-
+ 
     ## 2.2.2: Sidebar Input Fields
     ##----------------------------------##
     with st.form(key ='form_1'):
         with st.sidebar:
             cols = ['All Teams', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
-            team_choice = st.multiselect('1. Filter NHL teams', cols, default = 'All Teams', help = 'Replace All Teams with other NHL team(s) to compare against the Kraken.')
+            team_choice = st.multiselect('1. Filter for specifc NHL team(s)', cols, default = 'All Teams', help = 'Replace `All Teams` with other NHL team(s) to compare against the Kraken.')
             num_of_tweets = st.number_input('2. Maximum number of tweets', min_value=100, max_value=10000, value = 100, step = 100, help = 'Returns the most recent tweets within the last 7 days')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
@@ -264,9 +266,9 @@ def app():
     ##----------------------------------##
 
     # Show raw data if selected
-    if sentiment_expander.checkbox('Show VADER results for each Tweet'):
-        sentiment_expander.subheader('Raw data')
-        sentiment_expander.write(df_sentiment)
+    #if sentiment_expander.checkbox('Show VADER results for each Tweet'):
+        #sentiment_expander.subheader('Raw data')
+        #sentiment_expander.table(df_sentiment)
 
     # Click to download raw data as CSV
     sentiment_expander.markdown(nf.get_table_download_link(df_sentiment), unsafe_allow_html=True)
@@ -470,9 +472,9 @@ def app():
     ##----------------------------------##
 
     # Show raw data if selected
-    if descriptive_expander.checkbox('Show raw data'):
-        descriptive_expander.subheader('Raw data')
-        descriptive_expander.write(df_new)
+    #if descriptive_expander.checkbox('Show raw data'):
+        #descriptive_expander.subheader('Raw data')
+        #descriptive_expander.write(df_new)
 
     # Click to download raw data as CSV
     descriptive_expander.markdown(nf.get_table_download_link(df_tweets), unsafe_allow_html=True)
@@ -497,7 +499,6 @@ def app():
     data = df_tweets['clean_text']
 
     topic_view_option = topic_expander.radio('Choose display options', ('Default view', 'Analyst view (advanced options)'))
-
 
 
     if topic_view_option == 'Default view':

@@ -10,7 +10,7 @@
 #--------------------------------------------------
 import streamlit as st
 from PIL import Image
-from pages import readme, nhl_exp_app ,fans, insiders, teams
+from pages import readme ,fans, insiders
 from app_multipage import multi_app # import your app modules here
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-
 
@@ -56,9 +56,7 @@ app = multi_app() # Load app_multipage.py class functions
 
 # Add all your application here
 app.add_app("Read Me", readme.app)
-app.add_app("Twitter App", nhl_exp_app.app)
-app.add_app("Fans", fans.app)
-app.add_app("Teams", teams.app)
+app.add_app("NHL Fans", fans.app)
 app.add_app("NHL Insiders", insiders.app)
 
 app.run() # Run the main app

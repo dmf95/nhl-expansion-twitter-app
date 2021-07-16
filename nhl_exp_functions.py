@@ -60,7 +60,7 @@ def get_table_download_link(df):
     """
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
-    href = f'<a href="data:file/csv;base64,{b64}" download="tweets.csv">Download CSV file</a>'
+    href = f'<a href="data:file/csv;base64,{b64}" download="tweets.csv">Download Raw Data CSV file</a>'
     return href
 
 # Function 2: 
@@ -137,7 +137,8 @@ def classify_nhl_team(df):
     df = df[["id", "user", "created_at", "full_text", "clean_text"]]
     # Convert tweet to lower
     df.clean_text = df.clean_text.str.lower()  
-    # Classification: If a team's keywords come up, classify as a team specific indicator, with value = team name
+    
+    # NHL Team Classification: If a team's keywords come up, classify as a team specific indicator, with value = team name
     df['ANA'] = pd.np.where(df['clean_text'].str.contains('anaheim|ducks|#flytogether'), 'Anaheim Ducks', '0')
     df['ARZ'] = pd.np.where(df['clean_text'].str.contains('arizona|coyotes|#yotes'), 'Arizona Coyotes', '0')
     df['BOS'] = pd.np.where(df['clean_text'].str.contains('boston|bruins|#nhlbruins'), 'Boston Bruins', '0')
