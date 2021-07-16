@@ -40,13 +40,15 @@ stopwords_en = nltk.corpus.stopwords.words('english')
 # French stopwords
 stopwords_fr = nltk.corpus.stopwords.words('french')
     
-# words
+# Read in teams & accounts CSVs
+teams = pd.read_csv('assets/nhl_app_teams.csv')
+accounts = pd.read_csv('assets/nhl_app_accounts.csv')
 
 
 #----------------------------------------------
 # DEFINE FUNCTIONS
 #----------------------------------------------
-
+@st.cache(suppress_st_warning=True,allow_output_mutation=True)
 # Function 1
 #-----------------
 def get_table_download_link(df):
@@ -58,83 +60,71 @@ def get_table_download_link(df):
     """
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
-    href = f'<a href="data:file/csv;base64,{b64}" download="tweets.csv">Download CSV file</a>'
+    href = f'<a href="data:file/csv;base64,{b64}" download="tweets.csv">Download Raw Data CSV file</a>'
     return href
 
 # Function 2: 
 #----------------
 # Hit twitter api & add basic features & output 2 dataframes
 # @st.cache(suppress_st_warning=True,allow_output_mutation=True)
-def twitter_get(select_hashtag_keyword, select_language, user_word_entry, num_of_tweets):  
+def twitter_get_nhl(num_of_tweets):  
     
-    # Set up Twitter API access
-    # Define access keys and tokens
-    consumer_key = st.secrets['consumer_key']
-    consumer_secret = st.secrets['consumer_secret']
-    access_token = st.secrets['access_token']
-    access_token_secret = st.secrets['access_token_secret']
+    with st.spinner('Getting twitter data...'):
 
-    auth = tw.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
-    api = tw.API(auth, wait_on_rate_limit = True)
-    
-    # Keyword or hashtag
-    if select_hashtag_keyword == 'Hashtag':
-        user_word = '#' + user_word_entry
-    else:
-        user_word = user_word_entry
+        # Set up Twitter API access
+        # Define access keys and tokens
+        consumer_key = st.secrets['consumer_key']
+        consumer_secret = st.secrets['consumer_secret']
+        access_token = st.secrets['access_token']
+        access_token_secret = st.secrets['access_token_secret']
 
-    # Retweets (assumes yes)
-    user_word = user_word + ' -filter:retweets'
-    # The following is based on user language selection
+        # Tweepy auth handler
+        auth = tw.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        api = tw.API(auth, wait_on_rate_limit = True)
 
-    # ...English Language
-    if select_language == 'English':
+        # Define search terms
+        # https://developer.twitter.com/en/docs/twitter-api/v1/rules-and-filtering/search-operators
+        user_word = f'expansion draft OR expansiondraft'
+
+        # Filter out retweets
+        user_word = user_word + ' -filter:retweets'
+        # The following is based on user language selection
+
+        # English tweets only
         language = 'en'
 
-    # ...French Language
-    if select_language == 'French':
-        language = 'fr'
-
-    # Retweets (assumes yes)
-    user_word = user_word + ' -filter:retweets'
-
-    # Scenario 1: All languages
-    if select_language == 'All':
+        # Run search using defined params
         tweets = tw.Cursor(api.search,
-                            q=user_word,
-                            tweet_mode = "extended").items(num_of_tweets)
+                                q = user_word,
+                                tweet_mode = "extended",
+                                lang = language).items(num_of_tweets)
 
-    # Scenario 2: Specific language (English or French)
-    if select_language != 'All':
-        tweets = tw.Cursor(api.search,
-                            q=user_word,
-                            tweet_mode = "extended",
-                            lang=language).items(num_of_tweets)
+        # Store as dataframe
+        tweet_metadata = [[tweet.created_at, tweet.id, tweet.full_text, tweet.user.screen_name, tweet.retweet_count, tweet.favorite_count, tweet.user.followers_count, tweet.user.verified] for tweet in tweets]    
+        df_tweets = pd.DataFrame(data=tweet_metadata, columns=['created_at', 'id', 'full_text', 'user', 'rt_count', 'fav_count', 'follower_ct', 'verified'])
 
-    # Store as dataframe
-    tweet_metadata = [[tweet.created_at, tweet.id, tweet.full_text, tweet.user.screen_name, tweet.retweet_count, tweet.favorite_count] for tweet in tweets]
-    df_tweets = pd.DataFrame(data=tweet_metadata, columns=['created_at', 'id', 'full_text', 'user', 'rt_count', 'fav_count'])
+        # Add a new data variable
+        df_tweets['created_dt'] = df_tweets['created_at'].dt.date
 
-    # Add a new data variable
-    df_tweets['created_dt'] = df_tweets['created_at'].dt.date
+        # Add a new time variable
+        df_tweets['created_time'] = df_tweets['created_at'].dt.time
 
-    # Add a new time variable
-    df_tweets['created_time'] = df_tweets['created_at'].dt.time
+        # Create a new text variable to do manipulations on 
+        df_tweets['clean_text'] = df_tweets.full_text
 
-    # Create a new text variable to do manipulations on 
-    df_tweets['clean_text'] = df_tweets.full_text
-
-
-    df_new = df_tweets[["created_dt", "created_time", "full_text", "user", "rt_count", "fav_count"]]
-    df_new = df_new.rename(columns = {"created_dt": "Date", 
-                                 "created_time": "Time", 
-                                  "full_text": "Tweet", 
-                                  "user": "Username", 
-                                  "rt_count": "Retweets",  
-                                  "fav_count": "Favourites"})
-
+        # Create a tidy dataframe to later display to users 
+        df_new = df_tweets[["created_dt", "created_time", "full_text", "user", "rt_count", "fav_count", "follower_ct", "verified"]]
+        df_new = df_new.rename(columns = {"created_dt": "Date", 
+                                        "created_time": "Time", 
+                                        "full_text": "Tweet", 
+                                        "user": "Username", 
+                                        "rt_count": "Retweets",  
+                                        "fav_count": "Favourites",
+                                        "follower_ct": "Followers",
+                                        "verified": "Verified"})
     return df_tweets, df_new
+
 
 # Function 3: 
 #----------------
@@ -142,19 +132,13 @@ def twitter_get(select_hashtag_keyword, select_language, user_word_entry, num_of
 # returns a pandas dataframe that has classified each tweet as relating to an nhl team
 
 def classify_nhl_team(df):
-    
-    #Read in teams & accounts CSVs
-    teams = pd.read_csv('assets/nhl_app_teams.csv')
-    accounts = pd.read_csv('assets/nhl_app_accounts.csv')
-
-    # if team is kraken, then kraken else rest of league
-    #teams['expansion_type'] = np.where(teams.nhl_team.str.contains("Kraken"), "Kraken", "Rest of League")
 
     # Create a new and smaller dataframe to work with called df
     df = df[["id", "user", "created_at", "full_text", "clean_text"]]
     # Convert tweet to lower
     df.clean_text = df.clean_text.str.lower()  
-    # Classification: If a team's keywords come up, classify as a team specific indicator, with value = team name
+    
+    # NHL Team Classification: If a team's keywords come up, classify as a team specific indicator, with value = team name
     df['ANA'] = pd.np.where(df['clean_text'].str.contains('anaheim|ducks|#flytogether'), 'Anaheim Ducks', '0')
     df['ARZ'] = pd.np.where(df['clean_text'].str.contains('arizona|coyotes|#yotes'), 'Arizona Coyotes', '0')
     df['BOS'] = pd.np.where(df['clean_text'].str.contains('boston|bruins|#nhlbruins'), 'Boston Bruins', '0')
@@ -408,27 +392,28 @@ def sentiment_classifier(df, data_column):
 # Credit: https://ourcodingclub.github.io/tutorials/topic-modelling-python/
 
 def lda_topics(data, number_of_topics, no_top_words, min_df, max_df):
-    # the vectorizer object will be used to transform text to vector form
-    vectorizer = CountVectorizer(max_df=max_df, min_df=min_df, token_pattern='\w+|\$[\d\.]+|\S+')
+    with st.spinner('Setting up LDA model..'):
+        # the vectorizer object will be used to transform text to vector form
+        vectorizer = CountVectorizer(max_df=max_df, min_df=min_df, token_pattern='\w+|\$[\d\.]+|\S+')
 
-    # apply transformation
-    tf = vectorizer.fit_transform(data).toarray()
+        # apply transformation
+        tf = vectorizer.fit_transform(data).toarray()
 
-    # tf_feature_names tells us what word each column in the matrix represents
-    tf_feature_names = vectorizer.get_feature_names()
+        # tf_feature_names tells us what word each column in the matrix represents
+        tf_feature_names = vectorizer.get_feature_names()
 
-    model = LDA(n_components=number_of_topics, random_state=0)
+        model = LDA(n_components=number_of_topics, random_state=0)
 
-    model.fit(tf)
+        model.fit(tf)
 
-    topic_dict = {}
-    for topic_idx, topic in enumerate(model.components_):
-        topic_dict["Topic %d words" % (topic_idx)]= ['{}'.format(tf_feature_names[i])
-                        for i in topic.argsort()[:-no_top_words - 1:-1]]
-        topic_dict["Topic %d weights" % (topic_idx)]= ['{:.1f}'.format(topic[i])
-                        for i in topic.argsort()[:-no_top_words - 1:-1]]
+        topic_dict = {}
+        for topic_idx, topic in enumerate(model.components_):
+            topic_dict["Topic %d words" % (topic_idx)]= ['{}'.format(tf_feature_names[i])
+                            for i in topic.argsort()[:-no_top_words - 1:-1]]
+            topic_dict["Topic %d weights" % (topic_idx)]= ['{:.1f}'.format(topic[i])
+                            for i in topic.argsort()[:-no_top_words - 1:-1]]
 
-    topic_df = pd.DataFrame(topic_dict)
+        topic_df = pd.DataFrame(topic_dict)
 
     return pd.DataFrame(topic_df)
 
@@ -720,3 +705,63 @@ def insider_recent_tweets():
     df_user_tweets = df_user_tweets.reset_index(drop=True)
 
     return df_user_tweets
+
+  
+# Function 22
+#----------------
+# Group and summarize df_sentiment to be used as building blocks for various KPIs
+def group_nhl_data(df_sentiment):  
+   # Sentiment group dataframe
+    expansion_group = df_sentiment.groupby(['expansion_type', 'sentiment']).agg({'id': 'nunique', 'compound_score': ['mean', 'median', 'min', 'max']}).reset_index(level=[0,1])    
+    expansion_group2 = df_sentiment.groupby('expansion_type').agg({'id': 'nunique', 'compound_score': ['mean', 'median', 'min', 'max']}).reset_index()
+    team_group = df_sentiment.groupby(['nhl_team_abbr', 'nhl_team', 'sentiment']).agg({'id': 'nunique'}).reset_index()
+    team_group2 = df_sentiment.groupby(['nhl_team_abbr', 'nhl_team']).agg({'id': 'nunique', 'compound_score': ['mean', 'median', 'min', 'max']}).reset_index(level=[0,1])
+    team_group2 = team_group2.loc[team_group2['nhl_team_abbr'] != 'Unknown']
+
+    # columns
+    team_group2.columns = ['nhl_team_abbr', 'nhl_team', 'tweets', 'avg_compound_score', 'median_compound_score', 'min_compound_score', 'max_compound_score']    # rename
+    expansion_group.columns = ['expansion_type', 'sentiment', 'tweets', 'avg_compound_score', 'median_compound_score', 'min_compound_score', 'max_compound_score']
+    expansion_group2.columns = ['expansion_type',  'tweets', 'avg_compound_score', 'median_compound_score', 'min_compound_score', 'max_compound_score']
+    # rename
+    expansion_group.rename(columns={"id": "tweets"}, inplace = True)
+    team_group.rename(columns={"id": "tweets"}, inplace = True)
+
+    # Join team_group to teams data to expand the dataframe
+    # Extend df_clean by joining in data about the team
+    team_group = pd.merge(team_group,
+                        teams,
+                        on = 'nhl_team',
+                        how = 'left',
+                        indicator = True)
+
+    # Summary metrics -- Kraken
+    kraken = expansion_group.loc[expansion_group['expansion_type'] == 'Kraken']
+    kraken_total = kraken.tweets.sum()
+    kraken_negative  = kraken.loc[kraken['sentiment'] == 'Negative'].tweets.max()
+    kraken_neutral = kraken.loc[kraken['sentiment'] == 'Neutral'].tweets.max()
+    kraken_positive = kraken.loc[kraken['sentiment'] == 'Positive'].tweets.max()
+
+    #Summary metrics -- Rest of the league
+    rol = expansion_group.loc[expansion_group['expansion_type'] == 'Rest of League']
+    rol_total = rol.tweets.sum()
+    rol_negative  = rol.loc[rol['sentiment'] == 'Negative'].tweets.max()
+    rol_neutral = rol.loc[rol['sentiment'] == 'Neutral'].tweets.max()
+    rol_positive = rol.loc[rol['sentiment'] == 'Positive'].tweets.max()
+
+    #Summary metrics -- team = unknown
+    unknown = team_group.loc[team_group['nhl_team'] == 'Unknown']
+    unknown_total = unknown.tweets.sum()
+    unknown_negative  = unknown.loc[unknown['sentiment'] == 'Negative'].tweets.max()
+    unknown_neutral = unknown.loc[unknown['sentiment'] == 'Neutral'].tweets.max()
+    unknown_positive = unknown.loc[unknown['sentiment'] == 'Positive'].tweets.max()
+    
+    return expansion_group2, team_group2, kraken, kraken_total, kraken_negative, kraken_neutral, kraken_positive, rol, rol_total, rol_negative, rol_neutral, rol_positive, unknown, unknown_total, unknown_negative, unknown_negative, unknown_neutral, unknown_positive
+  
+  
+  
+# Function 23
+#----------------
+def load_message(user_num_tweets):
+    st.success('🎈Done! We got you the last ' + 
+                user_num_tweets + 
+                ' tweets about the NHL Expansion Draft')

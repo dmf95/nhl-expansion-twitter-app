@@ -46,6 +46,7 @@ class multi_app:
         app = st.sidebar.selectbox(
             'Choose a page',
             self.pages,
-            format_func=lambda app: app['title'])
+            format_func=lambda app: app['title'],
+            help = 'Change the page to see new goodies 😏')
 
         app['function']()
