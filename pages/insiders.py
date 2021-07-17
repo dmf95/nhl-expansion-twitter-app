@@ -56,11 +56,13 @@ def app():
     ##----------------------------------##
     with st.form(key ='form_1'):
         with st.sidebar:
-            team_cols = ['All Teams', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
-            team_choice = st.multiselect('1. Filter by specifc NHL Team(s)?', team_cols, default = 'All Teams', help = 'Remove and replace `All Teams` with other NHL team(s)')
-            company = st.multiselect('3. Filter by specific Sports Station(s)?', options = ['All Stations', 'HNIC', 'Sportsnet', 'TSN'], default = 'All Stations', help = 'Remove and replace `All Stations` with other Sports Station(s)')
-            retweets = st.radio('3. Include Retweets?', options = ['Yes', 'No'], help = 'Change to `No` if you only want to see original tweets from NHL Insiders')
-            replies = st.radio('4. Include Replies?', options = ['Yes', 'No'], help = 'Change to `No` if you do not want to see @ replies')
+            team_cols = ['All', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
+            team_choice = st.multiselect('1. Filter by specifc NHL Team(s)?', team_cols, default = 'All', help = 'Remove and replace `All` with other NHL team(s)')
+            #company_cols = ['All', 'DFO Hockey', 'EPRinkside', 'Freelance', 'HNIC', 'Hockey Data', 'Sportsnet', 'The Athletic', 'TSN']
+            #company_choice = st.multiselect('2. Filter by specific Sports Station(s)?', options = company_cols, default = 'All', help = 'Remove and replace `All` with other Sports Station(s)')
+            account_choice = st.selectbox('2. Include Hockey Analytics & Reporters?', options = ['Both', 'Hockey Analytics', 'Hockey Reporter'], help = 'Select `Hockey Analytics` or `NHL Insiders` to filter tweets')
+            rt_choice = st.radio('3. Include Retweets?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `retweets`')
+            reply_choice = st.radio('4. Include Replies?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `replies`')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
 
@@ -86,10 +88,8 @@ def app():
     # Run function 3: Get recent tweets for each insider account
     df_tweets = nf.insider_recent_tweets()
 
-    #st.table(df_tweets)
-
-    # Run function 5: Get classified nhl teams data    
-    df_nhl, df_original, df_match, df_nomatch = nf.classify_nhl_team(df_tweets)
+    # Run function 5b: Get classified nhl teams data    
+    df_nhl, df_original, df_match, df_nomatch = nf.classify_nhl_team_insider(df_tweets)
 
     # Run function #6: Feature extraction
     df_tweets = nf.feature_extract(df_tweets)
@@ -113,23 +113,42 @@ def app():
     text_sentiment = nf.sentiment_classifier(df_nhl, 'compound_score')
 
     # Select columns from text_sentiment
-    df_sentiment = text_sentiment[['id', 'created_at', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
+    df_sentiment = text_sentiment[['id', 'user', 'created_at',  'is_rt', 'reply_id', 'company', 'account_type', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
     
-    # If user choice "All teams", dont filter else filter by selected teams + Kraken
-    if 'All Teams' not in team_choice:
+     # Create ind variable: if reply_id is null, False else True
+    df_sentiment['is_reply'] = np.where(pd.isnull(df_sentiment.reply_id), 'False', 'True')
+
+    # If team_choice "All ", dont filter else filter by selected teams + Kraken
+    if 'All' not in team_choice:
         team_choice.append("SEA") # always include Kraken
         boolean_series = df_sentiment.nhl_team_abbr.isin(team_choice) # list to filter by
         df_sentiment = df_sentiment[boolean_series] # filter df_sentiment by list
 
-    # If user choice "All stations", dont filter else filter by selected teams + Kraken
-    #if 'All Stations' not in company:
-    #    boolean_series2 = df_sentiment.nhl_team_abbr.isin(company) # list to filter by
+    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
+    #if 'All' not in company_choice:
+    #    boolean_series2 = df_sentiment.company.isin(company_choice) # list to filter by
     #    df_sentiment = df_sentiment[boolean_series2] # filter df_sentiment by list
     
-    # If user choice "All teams", dont filter else filter by selected teams + Kraken
-    #if retweets == False:
-    #    boolean_series2 = df_sentiment.r.isin(company) # list to filter by
-    #    df_sentiment = df_sentiment[boolean_series2] # filter df_sentiment by list
+    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
+    if account_choice == 'Hockey Analytics':
+        df_sentiment = df_sentiment.loc[df_sentiment['account_type'] == 'analytics']# filter df_sentiment by list
+    
+    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
+    if account_choice == 'Hockey Reporter':
+        df_sentiment = df_sentiment.loc[df_sentiment['account_type'] == 'reporter']# filter df_sentiment by list
+    
+    # If rt choice is false, dont filter else filter by selected teams + Kraken
+    if rt_choice == 'Yes':
+        df_sentiment = df_sentiment
+    elif rt_choice == 'No':
+        df_sentiment = df_sentiment[df_sentiment['full_text'].str.contains("RT") == False] # filter out rows that contain with RT
+
+    # If reply choice is false, only select rows where reply is false
+    if reply_choice == 'Yes':
+        df_sentiment = df_sentiment
+    elif reply_choice == 'No':
+        df_sentiment = df_sentiment.loc[df_sentiment['is_reply'] == 'False']# filter df_sentiment by list
+    
 
     # Sentiment group dataframe
     expansion_group2, team_group2, kraken, kraken_total, kraken_negative, kraken_neutral, kraken_positive, rol, rol_total, rol_negative, rol_neutral, rol_positive, unknown, unknown_total, unknown_negative, unknown_negative, unknown_neutral, unknown_positive = nf.group_nhl_data(df_sentiment)
@@ -316,7 +335,7 @@ def app():
 
     ## 4.3.3: Plot wordcloud
     ##----------------------------------##
-    nf.plot_wordcloud(submitted2, score_type, text_sentiment, wordcloud_words, top_n_tweets)
+    nf.plot_wordcloud(submitted2, score_type, df_sentiment, wordcloud_words, top_n_tweets)
 
 
     ## 4.3.4: Plot top tweets
@@ -347,7 +366,7 @@ def app():
     # Run the top n tweets
     top_tweets_res = nf.print_top_n_tweets(df_sentiment, score_type_nm, top_n_tweets)
 
-    # Conditional title
+   # Conditional title
     str_num_tweets = str(top_n_tweets)
     show_top = str('Showing top ' + 
                     str_num_tweets + 
