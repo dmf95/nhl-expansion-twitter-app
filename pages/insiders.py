@@ -23,13 +23,9 @@ import nhl_exp_functions as nf # custom functions file
 # 1.3: #TODO
 #------------------------------------#
 
-# Filter RTs & replies from tweets
-# Filter tweets by date
-# User ability to filter by date, team, account, company, etc.
-# Remove max number of tweets in the form
-# Create a new function on success specific to this page
-# Review tweets
-
+# Make conditional logic to support filters (will require reviewing columns from accounts sheet)
+# Review tweets and accounts
+# Performance 
 
 
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~--=~-=~-=~-=~-=~-=~-
@@ -60,9 +56,11 @@ def app():
     ##----------------------------------##
     with st.form(key ='form_1'):
         with st.sidebar:
-            cols = ['All Teams', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
-            team_choice = st.multiselect('1. Filter for specifc NHL team(s)', cols, default = 'All Teams', help = 'Replace `All Teams` with other NHL team(s) to compare against the Kraken.')
-            num_of_tweets = st.number_input('2. Maximum number of tweets', min_value=100, max_value=10000, value = 100, step = 100, help = 'Returns the most recent tweets within the last 7 days')
+            team_cols = ['All Teams', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
+            team_choice = st.multiselect('1. Filter by specifc NHL Team(s)?', team_cols, default = 'All Teams', help = 'Remove and replace `All Teams` with other NHL team(s)')
+            company = st.multiselect('3. Filter by specific Sports Station(s)?', options = ['All Stations', 'HNIC', 'Sportsnet', 'TSN'], default = 'All Stations', help = 'Remove and replace `All Stations` with other Sports Station(s)')
+            retweets = st.radio('3. Include Retweets?', options = ['Yes', 'No'], help = 'Change to `No` if you only want to see original tweets from NHL Insiders')
+            replies = st.radio('4. Include Replies?', options = ['Yes', 'No'], help = 'Change to `No` if you do not want to see @ replies')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
 
@@ -88,7 +86,7 @@ def app():
     # Run function 3: Get recent tweets for each insider account
     df_tweets = nf.insider_recent_tweets()
 
-    st.write(df_tweets)
+    #st.table(df_tweets)
 
     # Run function 5: Get classified nhl teams data    
     df_nhl, df_original, df_match, df_nomatch = nf.classify_nhl_team(df_tweets)
@@ -123,6 +121,16 @@ def app():
         boolean_series = df_sentiment.nhl_team_abbr.isin(team_choice) # list to filter by
         df_sentiment = df_sentiment[boolean_series] # filter df_sentiment by list
 
+    # If user choice "All stations", dont filter else filter by selected teams + Kraken
+    #if 'All Stations' not in company:
+    #    boolean_series2 = df_sentiment.nhl_team_abbr.isin(company) # list to filter by
+    #    df_sentiment = df_sentiment[boolean_series2] # filter df_sentiment by list
+    
+    # If user choice "All teams", dont filter else filter by selected teams + Kraken
+    #if retweets == False:
+    #    boolean_series2 = df_sentiment.r.isin(company) # list to filter by
+    #    df_sentiment = df_sentiment[boolean_series2] # filter df_sentiment by list
+
     # Sentiment group dataframe
     expansion_group2, team_group2, kraken, kraken_total, kraken_negative, kraken_neutral, kraken_positive, rol, rol_total, rol_negative, rol_neutral, rol_positive, unknown, unknown_total, unknown_negative, unknown_negative, unknown_neutral, unknown_positive = nf.group_nhl_data(df_sentiment)
 
@@ -130,7 +138,6 @@ def app():
 
     # 3.2: Define Key Variables
     #------------------------------------#
-    user_num_tweets =str(int(num_of_tweets))
     total_tweets = len(df_original['full_text'])
     match_tweets = len(df_match['full_text'])
     nomatch_tweets = len(df_nomatch['full_text'])
@@ -152,7 +159,7 @@ def app():
     # 4.1: UX Messaging
     #------------------------------------#
 
-    nf.load_message(user_num_tweets)
+    nf.load_insider_message(total_tweets)
 
     #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=
 

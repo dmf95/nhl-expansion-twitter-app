@@ -160,11 +160,11 @@ def get_user_tweets(screen_name):
         oldest = alltweets[-1].id - 1
         
         #keep grabbing tweets until there are no tweets left to grab
-        #loop through twice (0 to 1) to get 400 tweets
-        for i in range(1):
+        #loop through once (0 to 0) to get 100 tweets
+        for i in range(0):
             
             #all subsiquent requests use the max_id param to prevent duplicates
-            new_tweets = api.user_timeline(screen_name = screen_name,count=200,max_id=oldest)
+            new_tweets = api.user_timeline(screen_name = screen_name,count=100,max_id=oldest)
             
             #save most recent tweets
             alltweets.extend(new_tweets)
@@ -179,11 +179,14 @@ def get_user_tweets(screen_name):
         #transform 2D array into pandas dataframe
         df_itweets = pd.DataFrame(data=outtweets, columns=['user', 'id', 'created_at', 'full_text', 'rt_count', 'fav_count', 'follower_ct', 'verified'])
         
-        # Add a new data variable
-        #df_itweets['created_dt'] = df_itweets['created_at'].dt.date
+        # Create date column
+        df_itweets['created_dt'] = df_itweets['created_at'].dt.normalize()
 
-        # Add a new time variable
-        #df_itweets['created_time'] = df_itweets['created_at'].dt.time
+        # Date filter max
+        df_itweets['filter_dt'] = pd.to_datetime("now") - (pd.to_timedelta(48, unit='h'))
+
+        # Filter based on results of filter_dt
+        df_itweets = df_itweets[df_itweets.created_at > df_itweets.filter_dt]
 
         # Create a new text variable to do manipulations on 
         df_itweets['clean_text'] = df_itweets.full_text
@@ -210,7 +213,7 @@ def insider_recent_tweets():
 
     # Iterates through list of accounts, gets most recents tweets for each account, and appends to dataframe
     for i in range(len(list_accounts)):
-        # Uses function 20 to get tweets for each account
+        # Uses function 3 to get tweets for each account
         new_user_tweets = get_user_tweets(list_accounts[i])
         # Append tweets to dataframe
         df_user_tweets = df_user_tweets.append(new_user_tweets)
@@ -776,7 +779,15 @@ def group_nhl_data(df_sentiment):
   
 # Function 23
 #----------------
-def load_message(user_num_tweets):
+def load_fan_message(user_num_tweets):
     st.success('🎈Done! We got you the last ' + 
                 user_num_tweets + 
                 ' tweets about the NHL Expansion Draft')
+
+# Function 23
+#----------------
+def load_insider_message(total_tweets):
+    tweets_num = str(total_tweets)
+    st.success('🎈Done! We got you  ' +
+                tweets_num +
+                ' tweets from NHL Insiders in the last 48h')

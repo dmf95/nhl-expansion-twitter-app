@@ -59,8 +59,8 @@ def app():
     ##----------------------------------##
     with st.form(key ='form_1'):
         with st.sidebar:
-            cols = ['All Teams', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
-            team_choice = st.multiselect('1. Filter for specifc NHL team(s)', cols, default = 'All Teams', help = 'Replace `All Teams` with other NHL team(s) to compare against the Kraken.')
+            team_cols = ['All Teams', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
+            team_choice = st.multiselect('1. Filter for specifc NHL team(s)', team_cols, default = 'All Teams', help = 'Replace `All Teams` with other NHL team(s) to compare against the Kraken.')
             num_of_tweets = st.number_input('2. Maximum number of tweets', min_value=100, max_value=10000, value = 100, step = 100, help = 'Returns the most recent tweets within the last 7 days')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
@@ -149,7 +149,7 @@ def app():
     # 4.1: UX Messaging
     #------------------------------------#
 
-    nf.load_message(user_num_tweets)
+    nf.load_fan_message(user_num_tweets)
 
     #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=
 
