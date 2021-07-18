@@ -45,7 +45,7 @@ def app():
     ##----------------------------------##
     st.title('NHL Fan-alyzer')
     st.markdown(    
-        '''Now that the [#SeaKraken](https://twitter.com/SeattleKraken "Seattle's Twitter Page") have had their time to strategize, its time to **find out how NHL fans around the world feel**'''
+        '''Now that the [#SeaKraken](https://twitter.com/SeattleKraken "Seattle's Twitter Page") have had their time to strategize, lets see **how NHL fans on Twitter feel**'''
     )
 
     #col1, col2 = st.beta_columns((1,1)) # 2 same sized columns
@@ -59,8 +59,9 @@ def app():
     ##----------------------------------##
     with st.form(key ='form_1'):
         with st.sidebar:
-            cols = ['All Teams', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
-            team_choice = st.multiselect('1. Filter for specifc NHL team(s)', cols, default = 'All Teams', help = 'Replace `All Teams` with other NHL team(s) to compare against the Kraken.')
+            team_cols = ['All Teams', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
+            team_choice = st.multiselect('1. Filter for specifc NHL team(s)', team_cols, default = 'All', help = 'Replace `All` with other NHL team(s) to compare against the Kraken.')
+            rt_choice = st.radio('2. Include tweets about multiple teams?', options = ['Yes', 'No'], help = 'Change to `No` if you only want to see tweets that we think matches a single team')
             num_of_tweets = st.number_input('2. Maximum number of tweets', min_value=100, max_value=10000, value = 100, step = 100, help = 'Returns the most recent tweets within the last 7 days')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
@@ -112,10 +113,10 @@ def app():
     text_sentiment = nf.sentiment_classifier(df_nhl, 'compound_score')
 
     # Select columns from text_sentiment
-    df_sentiment = text_sentiment[['id', 'created_at', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
+    df_sentiment = text_sentiment[['id', 'created_at', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
     
     # If user choice "All teams", dont filter else filter by selected teams + Kraken
-    if 'All Teams' not in team_choice:
+    if 'All' not in team_choice:
         team_choice.append("SEA") # always include Kraken
         boolean_series = df_sentiment.nhl_team_abbr.isin(team_choice) # list to filter by
         df_sentiment = df_sentiment[boolean_series] # filter df_sentiment by list
@@ -149,7 +150,7 @@ def app():
     # 4.1: UX Messaging
     #------------------------------------#
 
-    nf.load_message(user_num_tweets)
+    nf.load_fan_message(user_num_tweets)
 
     #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=
 
@@ -306,7 +307,7 @@ def app():
 
     ## 4.3.3: Plot wordcloud
     ##----------------------------------##
-    nf.plot_wordcloud(submitted2, score_type, text_sentiment, wordcloud_words, top_n_tweets)
+    nf.plot_wordcloud(submitted2, score_type, df_sentiment, wordcloud_words, top_n_tweets)
 
 
     ## 4.3.4: Plot top tweets

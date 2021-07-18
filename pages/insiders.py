@@ -12,7 +12,6 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-from sklearn import datasets
 from streamlit_metrics import metric_row
 import altair as alt
 import time
@@ -21,10 +20,13 @@ import time
 #------------------------------------#
 import nhl_exp_functions as nf # custom functions file
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=
-
-#~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=
 # 1.3: #TODO
 #------------------------------------#
+
+# Make conditional logic to support filters (will require reviewing columns from accounts sheet)
+# Review tweets and accounts
+# Performance 
+
 
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~--=~-=~-=~-=~-=~-=~-
 # PART 2: APP UI SETUP
@@ -38,9 +40,31 @@ def app():
 
     ## 2.1.1: Main Panel Title
     ##----------------------------------##
-    st.title('NHL Insiders View')
+    st.title('NHL Insiders Analyzer')
+    st.markdown(    
+        '''Now that the [#SeaKraken](https://twitter.com/SeattleKraken "Seattle's Twitter Page") have had their time to strategize, lets see **how some of our favorite NHL Insiders on Twitter feel**'''
+    )
 
+    #col1, col2 = st.beta_columns((1,1)) # 2 same sized columns
 
+    ## 2.2.1: Sidebar Title
+    ##----------------------------------##
+    st.sidebar.text("") # spacing
+    st.sidebar.header('Advanced Search') #sidebar title
+ 
+    ## 2.2.2: Sidebar Input Fields
+    ##----------------------------------##
+    with st.form(key ='form_1'):
+        with st.sidebar:
+            team_cols = ['All', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
+            team_choice = st.multiselect('1. Filter by specifc NHL Team(s)?', team_cols, default = 'All', help = 'Remove and replace `All` with other NHL team(s)')
+            #company_cols = ['All', 'DFO Hockey', 'EPRinkside', 'Freelance', 'HNIC', 'Hockey Data', 'Sportsnet', 'The Athletic', 'TSN']
+            #company_choice = st.multiselect('2. Filter by specific Sports Station(s)?', options = company_cols, default = 'All', help = 'Remove and replace `All` with other Sports Station(s)')
+            account_choice = st.selectbox('2. Include Hockey Analytics & Reporters?', options = ['Both', 'Hockey Analytics', 'Hockey Reporter'], help = 'Select `Hockey Analytics` or `NHL Insiders` to filter tweets')
+            rt_choice = st.radio('3. Include Retweets?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `retweets`')
+            reply_choice = st.radio('4. Include Replies?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `replies`')
+            st.sidebar.text("") # spacing
+            submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
 
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~--=~-=~-=~-=~-=~-=~-
 # PART 3: APP DATA SETUP
@@ -53,22 +77,28 @@ def app():
 
     # Layout
     #------------------------------------#
-    # Run function 21: Get recent tweets for each insider account
-    df_insider_tweets = nf.insider_recent_tweets()
+    if submitted1 == False: 
+        with st.spinner('Getting warmed up...'):
+            time.sleep(3)
 
-    st.write(df_insider_tweets)
+    if submitted1 == True:
+        with st.spinner('Gathering new inputs...'):
+            time.sleep(3)
 
-    # Run function #4: Feature extraction
-    df_tweets = nf.feature_extract(df_insider_tweets)
+    # Run function 3: Get recent tweets for each insider account
+    df_tweets = nf.insider_recent_tweets()
 
-    # Run function #5: Round 1 text cleaning (convert to lower, remove numbers, @, punctuation, numbers. etc.)
-    df_tweets['clean_text'] = df_tweets.full_text.apply(nf.text_clean_round1)
+    # Run function 5b: Get classified nhl teams data    
+    df_nhl, df_original, df_match, df_nomatch = nf.classify_nhl_team_insider(df_tweets)
 
-    ## Run function #7: Round 3 text cleaning (remove stop words)
+    # Run function #6: Feature extraction
+    df_tweets = nf.feature_extract(df_tweets)
+
+    # Run function #7: Round 1 text cleaning (convert to lower, remove numbers, @, punctuation, numbers. etc.)
+    df_tweets['clean_text'] = df_tweets.clean_text.apply(nf.text_clean_round1)
+
+    ## Run function #9: Round 3 text cleaning (remove stop words)
     df_tweets.clean_text  = nf.text_clean_round3(df_tweets.clean_text)
-
-    # Run function 3: Get classified nhl teams data
-    df_nhl, df_original, df_match, df_nomatch = nf.classify_nhl_team(df_insider_tweets)
 
     #Read in teams & accounts CSVs
     teams = pd.read_csv('assets/nhl_app_teams.csv')
@@ -82,55 +112,46 @@ def app():
     # Add sentiment classification
     text_sentiment = nf.sentiment_classifier(df_nhl, 'compound_score')
 
-    # Select columns to output
-    df_sentiment = text_sentiment[['user', 'id', 'created_at', 'nhl_team_abbr', 'nhl_team', 'expansion_type', 'full_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
+    # Select columns from text_sentiment
+    df_sentiment = text_sentiment[['id', 'user', 'created_at',  'is_rt', 'reply_id', 'company', 'account_type', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
+    
+     # Create ind variable: if reply_id is null, False else True
+    df_sentiment['is_reply'] = np.where(pd.isnull(df_sentiment.reply_id), 'False', 'True')
+
+    # If team_choice "All ", dont filter else filter by selected teams + Kraken
+    if 'All' not in team_choice:
+        team_choice.append("SEA") # always include Kraken
+        boolean_series = df_sentiment.nhl_team_abbr.isin(team_choice) # list to filter by
+        df_sentiment = df_sentiment[boolean_series] # filter df_sentiment by list
+
+    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
+    #if 'All' not in company_choice:
+    #    boolean_series2 = df_sentiment.company.isin(company_choice) # list to filter by
+    #    df_sentiment = df_sentiment[boolean_series2] # filter df_sentiment by list
+    
+    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
+    if account_choice == 'Hockey Analytics':
+        df_sentiment = df_sentiment.loc[df_sentiment['account_type'] == 'analytics']# filter df_sentiment by list
+    
+    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
+    if account_choice == 'Hockey Reporter':
+        df_sentiment = df_sentiment.loc[df_sentiment['account_type'] == 'reporter']# filter df_sentiment by list
+    
+    # If rt choice is false, dont filter else filter by selected teams + Kraken
+    if rt_choice == 'Yes':
+        df_sentiment = df_sentiment
+    elif rt_choice == 'No':
+        df_sentiment = df_sentiment[df_sentiment['full_text'].str.contains("RT") == False] # filter out rows that contain with RT
+
+    # If reply choice is false, only select rows where reply is false
+    if reply_choice == 'Yes':
+        df_sentiment = df_sentiment
+    elif reply_choice == 'No':
+        df_sentiment = df_sentiment.loc[df_sentiment['is_reply'] == 'False']# filter df_sentiment by list
+    
 
     # Sentiment group dataframe
-    sentiment_group = df_sentiment.groupby(['sentiment']).agg({'id': 'nunique'}).reset_index()
-    expansion_group = df_sentiment.groupby(['expansion_type', 'sentiment']).agg({'id': 'nunique', 'compound_score': ['mean', 'median', 'min', 'max']}).reset_index(level=[0,1])    
-    expansion_group2 = df_sentiment.groupby('expansion_type').agg({'id': 'nunique', 'compound_score': ['mean', 'median', 'min', 'max']}).reset_index()
-    team_group = df_sentiment.groupby(['nhl_team_abbr', 'nhl_team', 'sentiment']).agg({'id': 'nunique'}).reset_index()
-    team_group2 = df_sentiment.groupby(['nhl_team_abbr', 'nhl_team']).agg({'id': 'nunique', 'compound_score': ['mean', 'median', 'min', 'max']}).reset_index(level=[0,1])
-    team_group2 = team_group2.loc[team_group2['nhl_team_abbr'] != 'Unknown']
-
-    # columns
-    team_group2.columns = ['nhl_team_abbr', 'nhl_team', 'tweets', 'avg_compound_score', 'median_compound_score', 'min_compound_score', 'max_compound_score']    # rename
-    expansion_group.columns = ['expansion_type', 'sentiment', 'tweets', 'avg_compound_score', 'median_compound_score', 'min_compound_score', 'max_compound_score']
-    expansion_group2.columns = ['expansion_type',  'tweets', 'avg_compound_score', 'median_compound_score', 'min_compound_score', 'max_compound_score']
-    # rename
-    sentiment_group.rename(columns={"id": "tweets"}, inplace = True)
-    expansion_group.rename(columns={"id": "tweets"}, inplace = True)
-    team_group.rename(columns={"id": "tweets"}, inplace = True)
-
-    # Join team_group to teams data to expand the dataframe
-     # Extend df_clean by joining in data about the team
-    team_group = pd.merge(team_group,
-                        teams,
-                        on = 'nhl_team',
-                        how = 'left',
-                        indicator = True)
-
-    # Summary metrics -- Kraken
-    kraken = expansion_group.loc[expansion_group['expansion_type'] == 'Kraken']
-    kraken_total = kraken.tweets.sum()
-    kraken_negative  = kraken.loc[kraken['sentiment'] == 'Negative'].tweets.max()
-    kraken_neutral = kraken.loc[kraken['sentiment'] == 'Neutral'].tweets.max()
-    kraken_positive = kraken.loc[kraken['sentiment'] == 'Positive'].tweets.max()
-
-    #Summary metrics -- Rest of the league
-    rol = expansion_group.loc[expansion_group['expansion_type'] == 'Rest of League']
-    rol_total = rol.tweets.sum()
-    rol_negative  = rol.loc[rol['sentiment'] == 'Negative'].tweets.max()
-    rol_neutral = rol.loc[rol['sentiment'] == 'Neutral'].tweets.max()
-    rol_positive = rol.loc[rol['sentiment'] == 'Positive'].tweets.max()
-
-    #Summary metrics -- team = unknown
-    unknown = team_group.loc[team_group['nhl_team'] == 'Unknown']
-    unknown_total = unknown.tweets.sum()
-    unknown_negative  = unknown.loc[unknown['sentiment'] == 'Negative'].tweets.max()
-    unknown_neutral = unknown.loc[unknown['sentiment'] == 'Neutral'].tweets.max()
-    unknown_positive = unknown.loc[unknown['sentiment'] == 'Positive'].tweets.max()
-
+    expansion_group2, team_group2, kraken, kraken_total, kraken_negative, kraken_neutral, kraken_positive, rol, rol_total, rol_negative, rol_neutral, rol_positive, unknown, unknown_total, unknown_negative, unknown_negative, unknown_neutral, unknown_positive = nf.group_nhl_data(df_sentiment)
 
     #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=
 
@@ -146,16 +167,24 @@ def app():
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~--=~-=~-=~-=~-=~-=~-
     # PART 4: APP DATA & VISUALIZATIONS
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~--=~-=~-=~-=~-=~-=~-
+# - 4.1: UX messaging
 # - 4.2: Sentiment analysis
 # - 4.3: Descriptive analysis
 # - 4.4: Topic model analysis
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~--=~-=~-=~-=~-=~-=~-
 
+    #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=
+
+    # 4.1: UX Messaging
+    #------------------------------------#
+
+    nf.load_insider_message(total_tweets)
 
     #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=
 
     # 4.2: Sentiment Analysis
     #------------------------------------#
+
 
     # Subtitle
     st.header('❤️ Fan Sentiment')
@@ -169,9 +198,9 @@ def app():
                         x = alt.X('avg_compound_score:Q', axis = alt.Axis(title = 'Average Compound Score')),
                         y = alt.Y('expansion_type:O', sort = '-x', axis = alt.Axis(title = 'Expansion Type')),
                         tooltip = [alt.Tooltip('expansion_type:O', title = 'Expansions Type'),alt.Tooltip('sum(tweets):Q', title = 'Number of Tweets'), alt.Tooltip('avg_compound_score', title = 'Average Score'), alt.Tooltip('median_compound_score', title = 'Median Score'),alt.Tooltip('min_compound_score', title = 'Worst Score'), alt.Tooltip('max_compound_score', title = 'Best Score')],
-                        color=alt.condition(alt.datum.avg_compound_score > 0,
-                            alt.value("#99D9D9"),  # The positive color
-                            alt.value("E9072B"))  # The negative color
+                        color = alt.condition(alt.datum.avg_compound_score > 0,
+                                    alt.value("#99D9D9"),  # The positive color
+                                    alt.value("#E9072B"))  # The negative color     
                     ).transform_filter( # filters
                             (alt.datum.expansion_type != 'Unknown')               
                     ).properties(
@@ -254,7 +283,6 @@ def app():
     )
 
 
-
     ## 4.2.5: Compound Score Violin
     ##----------------------------------##
     
@@ -267,9 +295,9 @@ def app():
     ##----------------------------------##
 
     # Show raw data if selected
-    if sentiment_expander.checkbox('Show VADER results for each Tweet'):
-        sentiment_expander.subheader('Raw data')
-        sentiment_expander.write(df_sentiment)
+    #if sentiment_expander.checkbox('Show VADER results for each Tweet'):
+        #sentiment_expander.subheader('Raw data')
+        #sentiment_expander.table(df_sentiment)
 
     # Click to download raw data as CSV
     sentiment_expander.markdown(nf.get_table_download_link(df_sentiment), unsafe_allow_html=True)
@@ -299,15 +327,15 @@ def app():
 
     # Sentiment expander form submit for the wordcloud & top tweets
     with wordcloud_expander.form('form_2'):    
-        score_type = st.selectbox('Select sentiment', ['All', 'Positive', 'Neutral', 'Negative'], key=1)
-        wordcloud_words = st.number_input('Choose the max number of words for the word cloud', 15, key = 3)
-        top_n_tweets =  st.number_input('Choose the top number of tweets *', 3, key = 2)
+        score_type = st.selectbox('Select sentiment', ['All', 'Positive', 'Neutral', 'Negative'])
+        wordcloud_words = st.number_input('Choose the max number of words for the word cloud', 15)
+        top_n_tweets =  st.number_input('Choose the top number of tweets *', 3)
         submitted2 = st.form_submit_button('Regenerate Wordcloud', help = 'Re-run the Wordcloud with the current inputs')
 
 
     ## 4.3.3: Plot wordcloud
     ##----------------------------------##
-    nf.plot_wordcloud(submitted2, score_type, text_sentiment, wordcloud_words, top_n_tweets)
+    nf.plot_wordcloud(submitted2, score_type, df_sentiment, wordcloud_words, top_n_tweets)
 
 
     ## 4.3.4: Plot top tweets
@@ -338,7 +366,7 @@ def app():
     # Run the top n tweets
     top_tweets_res = nf.print_top_n_tweets(df_sentiment, score_type_nm, top_n_tweets)
 
-    # Conditional title
+   # Conditional title
     str_num_tweets = str(top_n_tweets)
     show_top = str('Showing top ' + 
                     str_num_tweets + 
@@ -363,7 +391,6 @@ def app():
     # Subtitle
     st.header('📊 Descriptive Analysis')
 
-
     # KPI for printing test
     #st.write("All Tweets:", total_tweets)
     #st.write("Matched Tweets:", match_tweets)
@@ -382,7 +409,7 @@ def app():
         {
             "Number of tweets": total_tweets,
             "% Tweets about the Kraken": "{:.0%}".format(kraken_total/total_tweets),
-            "% Tweets about another NHL Team": "{:.0%}".format(rol_total/total_tweets),
+            "% Tweets about other NHL Teams": "{:.0%}".format(rol_total/total_tweets),
         }
     )
 
@@ -474,8 +501,9 @@ def app():
     ##----------------------------------##
 
     # Show raw data if selected
-    if descriptive_expander.checkbox('Show raw data'):
-        descriptive_expander.subheader('Raw data')
+    #if descriptive_expander.checkbox('Show raw data'):
+        #descriptive_expander.subheader('Raw data')
+        #descriptive_expander.write(df_new)
 
     # Click to download raw data as CSV
     descriptive_expander.markdown(nf.get_table_download_link(df_tweets), unsafe_allow_html=True)
@@ -502,13 +530,12 @@ def app():
     topic_view_option = topic_expander.radio('Choose display options', ('Default view', 'Analyst view (advanced options)'))
 
 
-
     if topic_view_option == 'Default view':
         # Topic model expander form submit for topic model table & visual
         with topic_expander.form('form_3'):
             number_of_topics = st.number_input('Choose the number of topics. Start with a larger number and decrease if you see topics that are similar.',min_value=1, value=5)
             no_top_words = st.number_input('Choose the number of words in each topic you want to see.',min_value=1, value=5)
-            submitted2 = st.form_submit_button('Regenerate topics', help = 'Re-run topic model analysis with the current inputs')
+            submitted3 = st.form_submit_button('Regenerate topics', help = 'Re-run topic model analysis with the current inputs')
         df_lda = nf.lda_topics(data, number_of_topics, no_top_words, 0.1, 0.9)
         nf.print_lda_keywords(df_lda, number_of_topics)
     else:
@@ -517,7 +544,7 @@ def app():
             no_top_words = st.number_input('Choose the maximum number of words in each topic you want to see.',min_value=1, value=5)
             min_df = st.number_input('Ignore words that appear less than the specified proportion (decimal number between 0 and 1).',min_value=0.0, max_value=1.0, value=0.1)
             max_df = st.number_input('Ignore words that appear more than the specified proportion (decimal number between 0 and 1).',min_value=0.0, max_value=1.0, value=0.9)
-            submitted2 = st.form_submit_button('Regenerate topics', help = 'Re-run topic model analysis with the current inputs')
+            submitted3 = st.form_submit_button('Regenerate topics', help = 'Re-run topic model analysis with the current inputs')
         df_lda = nf.lda_topics(data, number_of_topics, no_top_words, min_df, max_df)
         st.write('Weights shown in brackets represent how important the word is to each topic')
         nf.print_lda_keywords_weight(df_lda, number_of_topics)

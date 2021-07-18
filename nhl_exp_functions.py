@@ -43,6 +43,8 @@ stopwords_fr = nltk.corpus.stopwords.words('french')
 # Read in teams & accounts CSVs
 teams = pd.read_csv('assets/nhl_app_teams.csv')
 accounts = pd.read_csv('assets/nhl_app_accounts.csv')
+accounts['username'] = accounts['account_id'].str.replace("@", "")
+
 
 
 #----------------------------------------------
@@ -69,7 +71,7 @@ def get_table_download_link(df):
 # @st.cache(suppress_st_warning=True,allow_output_mutation=True)
 def twitter_get_nhl(num_of_tweets):  
     
-    with st.spinner('Getting twitter data...'):
+    with st.spinner('Getting NHL Expansion Draft data from Twitter...'):
 
         # Set up Twitter API access
         # Define access keys and tokens
@@ -126,7 +128,123 @@ def twitter_get_nhl(num_of_tweets):
     return df_tweets, df_new
 
 
-# Function 3: 
+# Function 3a
+#----------------
+# Function to create dataframe of most recent 400 tweets from a specific user
+def get_user_tweets(screen_name):
+
+    with st.spinner('Getting NHL Insider data from Twitter...'):
+
+        #Twitter only allows access to a users most recent 3240 tweets with this method
+        #Adapted by: https://gist.github.com/yanofsky/5436496?fbclid=IwAR12gb56FOxTNI6R3SfiwpnbPpTvKLoeGR3kP0peQ1nGilcwsF8bR0LSVqE
+        
+        # Set up Twitter API access
+        # Define access keys and tokens
+        consumer_key = st.secrets['consumer_key']
+        consumer_secret = st.secrets['consumer_secret']
+        access_token = st.secrets['access_token']
+        access_token_secret = st.secrets['access_token_secret']
+
+        auth = tw.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        api = tw.API(auth, wait_on_rate_limit = True)
+
+        #initialize a list to hold all the tweepy Tweets
+        alltweets = []  
+        
+        #make initial request for most recent tweets (200 is the maximum allowed count)
+        new_tweets = api.user_timeline(screen_name = screen_name,count=200)
+        
+        #save most recent tweets
+        alltweets.extend(new_tweets)
+        
+        #save the id of the oldest tweet less one
+        oldest = alltweets[-1].id - 1
+        
+        #keep grabbing tweets until there are no tweets left to grab
+        #loop through once (0 to 0) to get 100 tweets
+        for i in range(0):
+            
+            #all subsiquent requests use the max_id param to prevent duplicates
+            new_tweets = api.user_timeline(screen_name = screen_name,count=100,max_id=oldest)
+            
+            #save most recent tweets
+            alltweets.extend(new_tweets)
+            
+            #update the id of the oldest tweet less one
+            oldest = alltweets[-1].id - 1
+            i +=1
+        
+        #transform the tweepy tweets into a 2D array that will populate the csv 
+        outtweets = [[tweet.user.screen_name, tweet.id_str, tweet.created_at, tweet.text, tweet.retweet_count, tweet.favorite_count, tweet.user.followers_count, tweet.user.verified, tweet.retweeted, tweet.in_reply_to_status_id] for tweet in alltweets]
+
+        #transform 2D array into pandas dataframe
+        df_itweets = pd.DataFrame(data=outtweets, columns=['user', 'id', 'created_at', 'full_text', 'rt_count', 'fav_count', 'follower_ct', 'verified', 'is_rt', 'reply_id'])
+        
+        # Create date column
+        df_itweets['created_dt'] = df_itweets['created_at'].dt.normalize()
+
+        # Date filter max
+        df_itweets['filter_dt'] = pd.to_datetime("now") - (pd.to_timedelta(48, unit='h'))
+
+        # Filter based on results of filter_dt
+        df_itweets = df_itweets[df_itweets.created_at > df_itweets.filter_dt]
+
+        # Create a new text variable to do manipulations on 
+        df_itweets['clean_text'] = df_itweets.full_text
+
+    return df_itweets
+
+
+# Function 3b
+#----------------
+# Return recent tweets for list of Twitter accounts specified in /assets/nhl_app_accounts.csv
+def insider_recent_tweets():
+
+    # Get list of Twitter accounts
+    df_accounts = pd.read_csv('assets/nhl_app_accounts.csv')
+
+    # Remove @ from username
+    df_accounts['clean_account_id'] = df_accounts['account_id'].str.replace("@", "")
+
+    # Create list of accounts
+    list_accounts = df_accounts['clean_account_id'].tolist()
+
+    # Create empty dataframe to append tweets in the for loop below
+    df_user_tweets = pd.DataFrame()
+
+    # Iterates through list of accounts, gets most recents tweets for each account, and appends to dataframe
+    for i in range(len(list_accounts)):
+        # Uses function 3 to get tweets for each account
+        new_user_tweets = get_user_tweets(list_accounts[i])
+        # Append tweets to dataframe
+        df_user_tweets = df_user_tweets.append(new_user_tweets)
+
+    # Reset dataframe index
+    df_user_tweets = df_user_tweets.reset_index(drop=True)
+
+    return pd.DataFrame(df_user_tweets)
+
+# Function 4: 
+#----------------
+# takes in pandas dataframe after first twitter scrape
+# returns a pandas dataframe that has classified each tweet as relating to an nhl team
+
+def insider_join(df):
+    
+    # Get list of Twitter accounts
+    df_accounts = pd.read_csv('assets/nhl_app_accounts.csv')
+    # Remove @ from username
+    df_accounts['username'] = df_accounts['account_id'].str.replace("@", "")
+
+    # Extend df_clean by joining in data about the account
+    df_merged = df.merge(df_accounts, left_on='user', right_on='username', how='left', indicator=True).astype('object')
+
+    return df_merged
+
+
+
+# Function 5a: 
 #----------------
 # takes in pandas dataframe after first twitter scrape
 # returns a pandas dataframe that has classified each tweet as relating to an nhl team
@@ -134,43 +252,78 @@ def twitter_get_nhl(num_of_tweets):
 def classify_nhl_team(df):
 
     # Create a new and smaller dataframe to work with called df
-    df = df[["id", "user", "created_at", "full_text", "clean_text"]]
+    df = df[["id", "user", "created_at", 'rt_count', 'fav_count', 'follower_ct', 'verified', "full_text", "clean_text"]]
+    
+    # NHL Team Classification: If a team's keywords come up, classify as a team specific indicator, with value = team name
+    df['ANA'] = pd.np.where(df['clean_text'].str.contains('ANA'), 'Anaheim Ducks', '0')
+    df['ARZ'] = pd.np.where(df['clean_text'].str.contains('ARZ'), 'Arizona Coyotes', '0')
+    df['BOS'] = pd.np.where(df['clean_text'].str.contains('BOS'), 'Boston Bruins', '0')
+    df['BUF'] = pd.np.where(df['clean_text'].str.contains('BUF'), 'Buffalo Sabres', '0')
+    df['CGY'] = pd.np.where(df['clean_text'].str.contains('CGY'), 'Calgary Flames', '0')
+    df['CAR'] = pd.np.where(df['clean_text'].str.contains('CAR'), 'Carolina Hurricanes', '0')
+    df['CHI'] = pd.np.where(df['clean_text'].str.contains('CHI'), 'Chicago Blackhawks', '0')
+    df['COL'] = pd.np.where(df['clean_text'].str.contains('COL'), 'Colorado Avalanche', '0')
+    df['CBJ'] = pd.np.where(df['clean_text'].str.contains('CBJ'), 'Columbus Blue Jackets', '0')
+    df['DAL'] = pd.np.where(df['clean_text'].str.contains('DAL'), 'Dallas Stars', '0')
+    df['DET'] = pd.np.where(df['clean_text'].str.contains('DET'), 'Detroit Red Wings', '0')
+    df['EDM'] = pd.np.where(df['clean_text'].str.contains('EDM'), 'Edmonton Oilers', '0')
+    df['FLA'] = pd.np.where(df['clean_text'].str.contains('FLA'), 'Florida Panthers', '0')
+    df['LAK'] = pd.np.where(df['clean_text'].str.contains('LAK'), 'Los Angeles Kings', '0')
+    df['MIN'] = pd.np.where(df['clean_text'].str.contains('MIN'), 'Minnesota Wild', '0')
+    df['MTL'] = pd.np.where(df['clean_text'].str.contains('MTL'), 'Montreal Canadiens', '0')
+    df['NSH'] = pd.np.where(df['clean_text'].str.contains('NSH'), 'Nashville Predators', '0')
+    df['NJD'] = pd.np.where(df['clean_text'].str.contains('NJD|NJ'), 'New Jersey Devils', '0')
+    df['NYI'] = pd.np.where(df['clean_text'].str.contains('NYI'), 'New York Islanders', '0')
+    df['NYR'] = pd.np.where(df['clean_text'].str.contains('NYR'), 'New York Rangers', '0')
+    df['OTT'] = pd.np.where(df['clean_text'].str.contains('OTT'), 'Ottawa Senators', '0')
+    df['PHI'] = pd.np.where(df['clean_text'].str.contains('PHI'), 'Philadelphia Flyers', '0')
+    df['PIT'] = pd.np.where(df['clean_text'].str.contains('PIT'), 'Pittsburgh Penguins', '0')
+    df['SJS'] = pd.np.where(df['clean_text'].str.contains('SJ|SJS'), 'San Jose Sharks', '0')
+    df['SEA'] = pd.np.where(df['clean_text'].str.contains('SEA'), 'Seattle Kraken', '0')
+    df['STL'] = pd.np.where(df['clean_text'].str.contains('STL'), 'St Louis Blues', '0')
+    df['TBL'] = pd.np.where(df['clean_text'].str.contains('TB|TBL'), 'Tampa Bay Lightning', '0')
+    df['TOR'] = pd.np.where(df['clean_text'].str.contains('TOR'), 'Toronto Maple Leafs', '0')
+    df['VAN'] = pd.np.where(df['clean_text'].str.contains('VAN'), 'Vancouver Canucks', '0') 
+    df['VGK'] = pd.np.where(df['clean_text'].str.contains('VEG|VGK'), 'Vegas Golden Knights', '0')
+    df['WSH'] = pd.np.where(df['clean_text'].str.contains('WSH|WASH'), 'Washington Capitals', '0')
+    df['WPG'] = pd.np.where(df['clean_text'].str.contains('WPG'), 'Winnipeg Jets', '0')
+
     # Convert tweet to lower
     df.clean_text = df.clean_text.str.lower()  
     
     # NHL Team Classification: If a team's keywords come up, classify as a team specific indicator, with value = team name
-    df['ANA'] = pd.np.where(df['clean_text'].str.contains('anaheim|ducks|#flytogether'), 'Anaheim Ducks', '0')
-    df['ARZ'] = pd.np.where(df['clean_text'].str.contains('arizona|coyotes|#yotes'), 'Arizona Coyotes', '0')
-    df['BOS'] = pd.np.where(df['clean_text'].str.contains('boston|bruins|#nhlbruins'), 'Boston Bruins', '0')
-    df['BUF'] = pd.np.where(df['clean_text'].str.contains('buffalo|sabres|#letsgobuffalo'), 'Buffalo Sabres', '0')
-    df['CGY'] = pd.np.where(df['clean_text'].str.contains('calgary|flames|#cofred'), 'Calgary Flames', '0')
-    df['CAR'] = pd.np.where(df['clean_text'].str.contains('carolina|hurricanes|#canes|#letsgocanes'), 'Carolina Hurricanes', '0')
-    df['CHI'] = pd.np.where(df['clean_text'].str.contains('chicago|blackhawks|#blackhawks'), 'Chicago Blackhawks', '0')
-    df['COL'] = pd.np.where(df['clean_text'].str.contains('colorado|avalanche|#GoAvsGo'), 'Colorado Avalanche', '0')
-    df['CBJ'] = pd.np.where(df['clean_text'].str.contains('columbus|bluejackets|jackets|#CBJ'), 'Columbus Blue Jackets', '0')
-    df['DAL'] = pd.np.where(df['clean_text'].str.contains('dallas|stars|#gostars'), 'Dallas Stars', '0')
-    df['DET'] = pd.np.where(df['clean_text'].str.contains('detroit|redwings|#lgrw'), 'Detroit Red Wings', '0')
-    df['EDM'] = pd.np.where(df['clean_text'].str.contains('edmonton|oilers|#oilers'), 'Edmonton Oilers', '0')
-    df['FLA'] = pd.np.where(df['clean_text'].str.contains('florida|panthers|#flapanthers'), 'Florida Panthers', '0')
-    df['LAK'] = pd.np.where(df['clean_text'].str.contains('los angeles|kings|#gokingsgo'), 'Los Angeles Kings', '0')
-    df['MIN'] = pd.np.where(df['clean_text'].str.contains('minnesota|wild|#mnwild'), 'Minnesota Wild', '0')
-    df['MTL'] = pd.np.where(df['clean_text'].str.contains('montreal|canadiens|habs|#gohabsgo'), 'Montreal Canadiens', '0')
-    df['NSH'] = pd.np.where(df['clean_text'].str.contains('nashville|predators|#preds'), 'Nashville Predators', '0')
-    df['NJD'] = pd.np.where(df['clean_text'].str.contains('new jersey|devils|#njdevils'), 'New Jersey Devils', '0')
-    df['NYI'] = pd.np.where(df['clean_text'].str.contains('new york islanders|islanders|#isles'), 'New York Islanders', '0')
-    df['NYR'] = pd.np.where(df['clean_text'].str.contains('new york rangers|rangers|#nyr'), 'New York Rangers', '0')
-    df['OTT'] = pd.np.where(df['clean_text'].str.contains('ottawa|senators|sens|#gosensgo'), 'Ottawa Senators', '0')
-    df['PHI'] = pd.np.where(df['clean_text'].str.contains('philadelphia|flyers|#anytimeanywhere'), 'Philadelphia Flyers', '0')
-    df['PIT'] = pd.np.where(df['clean_text'].str.contains('pittsburgh|penguins|#pens|#letsgopens'), 'Pittsburgh Penguins', '0')
-    df['SJS'] = pd.np.where(df['clean_text'].str.contains('san jose|sharks|#sjsharks'), 'San Jose Sharks', '0')
-    df['SEA'] = pd.np.where(df['clean_text'].str.contains('seattle|kraken|#seakraken'), 'Seattle Kraken', '0')
-    df['STL'] = pd.np.where(df['clean_text'].str.contains('stlouis|st. louis|st louis|blues|#stblues'), 'St Louis Blues', '0')
-    df['TBL'] = pd.np.where(df['clean_text'].str.contains('tampa bay|lightning|tampa|#gobolts'), 'Tampa Bay Lightning', '0')
-    df['TOR'] = pd.np.where(df['clean_text'].str.contains('toronto|maple leafs|#leafsforever'), 'Toronto Maple Leafs', '0')
-    df['VAN'] = pd.np.where(df['clean_text'].str.contains('vancouver|canucks|#canucks'), 'Vancouver Canucks', '0') 
-    df['VGK'] = pd.np.where(df['clean_text'].str.contains('vegas|golden knights|knights|#vegasborn'), 'Vegas Golden Knights', '0')
-    df['WSH'] = pd.np.where(df['clean_text'].str.contains('washington|capitals|#caps|#allcaps'), 'Washington Capitals', '0')
-    df['WPG'] = pd.np.where(df['clean_text'].str.contains('winnipeg|jets|#gojetsgo'), 'Winnipeg Jets', '0')
+    df['ANA'] = pd.np.where(df['clean_text'].str.contains('anaheim|ducks|flytogether'), 'Anaheim Ducks', df.ANA)
+    df['ARZ'] = pd.np.where(df['clean_text'].str.contains('arizona|coyotes|yotes'), 'Arizona Coyotes', df.ARZ)
+    df['BOS'] = pd.np.where(df['clean_text'].str.contains('boston|bruins|nhlbruins'), 'Boston Bruins', df.BOS)
+    df['BUF'] = pd.np.where(df['clean_text'].str.contains('buffalo|sabres|letsgobuffalo'), 'Buffalo Sabres', df.BUF)
+    df['CGY'] = pd.np.where(df['clean_text'].str.contains('calgary|flames|cofred'), 'Calgary Flames', df.CGY)
+    df['CAR'] = pd.np.where(df['clean_text'].str.contains('carolina|hurricanes|canes|letsgocanes'), 'Carolina Hurricanes', df.CAR)
+    df['CHI'] = pd.np.where(df['clean_text'].str.contains('chicago|blackhawks|blackhawks'), 'Chicago Blackhawks', df.CHI)
+    df['COL'] = pd.np.where(df['clean_text'].str.contains('colorado|avalanche|GoAvsGo|avs'), 'Colorado Avalanche', df.COL)
+    df['CBJ'] = pd.np.where(df['clean_text'].str.contains('columbus|bluejackets|jackets|cbj'), 'Columbus Blue Jackets', df.CBJ)
+    df['DAL'] = pd.np.where(df['clean_text'].str.contains('dallas|stars|gostars'), 'Dallas Stars', df.DAL)
+    df['DET'] = pd.np.where(df['clean_text'].str.contains('detroit|redwings|lgrw'), 'Detroit Red Wings', df.DET)
+    df['EDM'] = pd.np.where(df['clean_text'].str.contains('edmonton|oilers|oil'), 'Edmonton Oilers', df.EDM)
+    df['FLA'] = pd.np.where(df['clean_text'].str.contains('florida|panthers|flapanthers'), 'Florida Panthers', df.FLA)
+    df['LAK'] = pd.np.where(df['clean_text'].str.contains('los angeles|kings|gokingsgo'), 'Los Angeles Kings', df.LAK)
+    df['MIN'] = pd.np.where(df['clean_text'].str.contains('minnesota|wild|mnwild|minny|guerin'), 'Minnesota Wild', df.MIN)
+    df['MTL'] = pd.np.where(df['clean_text'].str.contains('montreal|canadiens|habs|gohabsgo'), 'Montreal Canadiens', df.MTL)
+    df['NSH'] = pd.np.where(df['clean_text'].str.contains('nashville|predators|preds'), 'Nashville Predators', df.NSH)
+    df['NJD'] = pd.np.where(df['clean_text'].str.contains('new jersey|devils|njdevils'), 'New Jersey Devils', df.NJD)
+    df['NYI'] = pd.np.where(df['clean_text'].str.contains('new york islanders|islanders|isles'), 'New York Islanders', df.NYI)
+    df['NYR'] = pd.np.where(df['clean_text'].str.contains('new york rangers|rangers|nyr'), 'New York Rangers', df.NYR)
+    df['OTT'] = pd.np.where(df['clean_text'].str.contains('ottawa|senators|sens|gosensgo'), 'Ottawa Senators', df.OTT)
+    df['PHI'] = pd.np.where(df['clean_text'].str.contains('philadelphia|flyers|anytimeanywhere'), 'Philadelphia Flyers', df.PHI)
+    df['PIT'] = pd.np.where(df['clean_text'].str.contains('pittsburgh|penguins|pens|letsgopens|pitts'), 'Pittsburgh Penguins', df.PIT)
+    df['SJS'] = pd.np.where(df['clean_text'].str.contains('san jose|sharks|sjsharks'), 'San Jose Sharks', df.SJS)
+    df['SEA'] = pd.np.where(df['clean_text'].str.contains('seattle|kraken|seakraken'), 'Seattle Kraken', df.SEA)
+    df['STL'] = pd.np.where(df['clean_text'].str.contains('stlouis|st. louis|st louis|blues|stlblues'), 'St Louis Blues', df.STL)
+    df['TBL'] = pd.np.where(df['clean_text'].str.contains('tampa bay|lightning|tampa|gobolts'), 'Tampa Bay Lightning', df.TBL)
+    df['TOR'] = pd.np.where(df['clean_text'].str.contains('toronto|maple leafs|leafsforever|leafs|dubas'), 'Toronto Maple Leafs', df.TOR)
+    df['VAN'] = pd.np.where(df['clean_text'].str.contains('vancouver|canucks|nucks|benning'), 'Vancouver Canucks', df.VAN) 
+    df['VGK'] = pd.np.where(df['clean_text'].str.contains('vegas|golden knights|knights|#vegasborn'), 'Vegas Golden Knights', df.VGK)
+    df['WSH'] = pd.np.where(df['clean_text'].str.contains('washington|capitals|caps|allcaps'), 'Washington Capitals', df.WSH)
+    df['WPG'] = pd.np.where(df['clean_text'].str.contains('winnipeg|jets|gojetsgo'), 'Winnipeg Jets', df.WPG)
 
     # Define columns to concatenate
     cols = ['ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'SEA', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
@@ -188,11 +341,11 @@ def classify_nhl_team(df):
     # Stash a dataframe with those tweets that were never paired to a keyword 
     df_nomatch = df.loc[df['no_matches'] == 1]
     # Select columns
-    df_nomatch = df_nomatch[['id', 'user', 'created_at', 'full_text', 'clean_text', 'multiple_teams', 'no_matches', 'teams_concat']]
+    df_nomatch = df_nomatch[['id', 'user', 'created_at', 'full_text', 'clean_text', 'multiple_teams', 'no_matches', 'teams_concat', 'rt_count', 'fav_count', 'follower_ct', 'verified']]
 
     # Melt the dataframe such that each row is equal to a tweet that was matched to a team's keyword (introducing dups to tweets)
     melted_df = df.melt(
-                    id_vars = ['id', 'user', 'created_at', 'full_text', 'clean_text', 'multiple_teams', 'no_matches', 'teams_concat'],
+                    id_vars = ['id', 'user', 'created_at', 'full_text', 'clean_text', 'multiple_teams', 'no_matches', 'teams_concat', 'rt_count', 'fav_count', 'follower_ct', 'verified'],
                     value_vars = ['ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'SEA', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG'],
                     var_name = 'nhl_team_abbr',
                     value_name = "nhl_team"
@@ -212,17 +365,146 @@ def classify_nhl_team(df):
     #print('total rows:', len(df_clean),'melted_rows:', (len(melted_df)), 'nomatch_rows:', len(df_nomatch))
 
     # Extend df_clean by joining in data about the team
-    df_merged = pd.merge(df_clean,
-                        teams,
-                        on = 'nhl_team',
-                        how = 'left',
-                        indicator = True)
-
+    df_merged = pd.merge(df_clean, teams, on = 'nhl_team', how = 'left', indicator = True).astype("object")
+    
     return df_merged, df, df_match, df_nomatch
 
 
+# Function 5b: 
+#----------------
+# takes in pandas dataframe after first twitter scrape
+# returns a pandas dataframe that has classified each tweet as relating to an nhl team
 
-# Function 4
+def classify_nhl_team_insider(df1):
+
+     # Get list of Twitter accounts
+    df_accounts = pd.read_csv('assets/nhl_app_accounts.csv')
+    # Remove @ from username
+    df_accounts['username'] = df_accounts['account_id'].str.replace("@", "")
+
+    # Extend df_clean by joining in data about the account
+    df = df1.merge(df_accounts, left_on='user', right_on='username', how='left', indicator=True).astype('object')
+    
+    # Create a new and smaller dataframe to work with called df
+    df = df[["id", "user", "created_at", 'rt_count', 'fav_count', 'follower_ct', 'verified', 'is_rt', 'reply_id', "full_text", "clean_text", "company", "account_type"]]
+    
+    # NHL Team Classification: If a team's keywords come up, classify as a team specific indicator, with value = team name
+    df['ANA'] = pd.np.where(df['clean_text'].str.contains('ANA'), 'Anaheim Ducks', '0')
+    df['ARZ'] = pd.np.where(df['clean_text'].str.contains('ARZ'), 'Arizona Coyotes', '0')
+    df['BOS'] = pd.np.where(df['clean_text'].str.contains('BOS'), 'Boston Bruins', '0')
+    df['BUF'] = pd.np.where(df['clean_text'].str.contains('BUF'), 'Buffalo Sabres', '0')
+    df['CGY'] = pd.np.where(df['clean_text'].str.contains('CGY'), 'Calgary Flames', '0')
+    df['CAR'] = pd.np.where(df['clean_text'].str.contains('CAR'), 'Carolina Hurricanes', '0')
+    df['CHI'] = pd.np.where(df['clean_text'].str.contains('CHI'), 'Chicago Blackhawks', '0')
+    df['COL'] = pd.np.where(df['clean_text'].str.contains('COL'), 'Colorado Avalanche', '0')
+    df['CBJ'] = pd.np.where(df['clean_text'].str.contains('CBJ'), 'Columbus Blue Jackets', '0')
+    df['DAL'] = pd.np.where(df['clean_text'].str.contains('DAL'), 'Dallas Stars', '0')
+    df['DET'] = pd.np.where(df['clean_text'].str.contains('DET'), 'Detroit Red Wings', '0')
+    df['EDM'] = pd.np.where(df['clean_text'].str.contains('EDM'), 'Edmonton Oilers', '0')
+    df['FLA'] = pd.np.where(df['clean_text'].str.contains('FLA'), 'Florida Panthers', '0')
+    df['LAK'] = pd.np.where(df['clean_text'].str.contains('LAK'), 'Los Angeles Kings', '0')
+    df['MIN'] = pd.np.where(df['clean_text'].str.contains('MIN'), 'Minnesota Wild', '0')
+    df['MTL'] = pd.np.where(df['clean_text'].str.contains('MTL'), 'Montreal Canadiens', '0')
+    df['NSH'] = pd.np.where(df['clean_text'].str.contains('NSH'), 'Nashville Predators', '0')
+    df['NJD'] = pd.np.where(df['clean_text'].str.contains('NJD|NJ'), 'New Jersey Devils', '0')
+    df['NYI'] = pd.np.where(df['clean_text'].str.contains('NYI'), 'New York Islanders', '0')
+    df['NYR'] = pd.np.where(df['clean_text'].str.contains('NYR'), 'New York Rangers', '0')
+    df['OTT'] = pd.np.where(df['clean_text'].str.contains('OTT'), 'Ottawa Senators', '0')
+    df['PHI'] = pd.np.where(df['clean_text'].str.contains('PHI'), 'Philadelphia Flyers', '0')
+    df['PIT'] = pd.np.where(df['clean_text'].str.contains('PIT'), 'Pittsburgh Penguins', '0')
+    df['SJS'] = pd.np.where(df['clean_text'].str.contains('SJ|SJS'), 'San Jose Sharks', '0')
+    df['SEA'] = pd.np.where(df['clean_text'].str.contains('SEA'), 'Seattle Kraken', '0')
+    df['STL'] = pd.np.where(df['clean_text'].str.contains('STL'), 'St Louis Blues', '0')
+    df['TBL'] = pd.np.where(df['clean_text'].str.contains('TB|TBL'), 'Tampa Bay Lightning', '0')
+    df['TOR'] = pd.np.where(df['clean_text'].str.contains('TOR'), 'Toronto Maple Leafs', '0')
+    df['VAN'] = pd.np.where(df['clean_text'].str.contains('VAN'), 'Vancouver Canucks', '0') 
+    df['VGK'] = pd.np.where(df['clean_text'].str.contains('VEG|VGK'), 'Vegas Golden Knights', '0')
+    df['WSH'] = pd.np.where(df['clean_text'].str.contains('WSH|WASH'), 'Washington Capitals', '0')
+    df['WPG'] = pd.np.where(df['clean_text'].str.contains('WPG'), 'Winnipeg Jets', '0')
+
+    # Convert tweet to lower
+    df.clean_text = df.clean_text.str.lower()  
+    
+    # NHL Team Classification: If a team's keywords come up, classify as a team specific indicator, with value = team name
+    df['ANA'] = pd.np.where(df['clean_text'].str.contains('anaheim|ducks|flytogether'), 'Anaheim Ducks', df.ANA)
+    df['ARZ'] = pd.np.where(df['clean_text'].str.contains('arizona|coyotes|yotes'), 'Arizona Coyotes', df.ARZ)
+    df['BOS'] = pd.np.where(df['clean_text'].str.contains('boston|bruins|nhlbruins'), 'Boston Bruins', df.BOS)
+    df['BUF'] = pd.np.where(df['clean_text'].str.contains('buffalo|sabres|letsgobuffalo'), 'Buffalo Sabres', df.BUF)
+    df['CGY'] = pd.np.where(df['clean_text'].str.contains('calgary|flames|cofred'), 'Calgary Flames', df.CGY)
+    df['CAR'] = pd.np.where(df['clean_text'].str.contains('carolina|hurricanes|canes|letsgocanes'), 'Carolina Hurricanes', df.CAR)
+    df['CHI'] = pd.np.where(df['clean_text'].str.contains('chicago|blackhawks|blackhawks'), 'Chicago Blackhawks', df.CHI)
+    df['COL'] = pd.np.where(df['clean_text'].str.contains('colorado|avalanche|GoAvsGo|avs'), 'Colorado Avalanche', df.COL)
+    df['CBJ'] = pd.np.where(df['clean_text'].str.contains('columbus|bluejackets|jackets|cbj'), 'Columbus Blue Jackets', df.CBJ)
+    df['DAL'] = pd.np.where(df['clean_text'].str.contains('dallas|stars|gostars'), 'Dallas Stars', df.DAL)
+    df['DET'] = pd.np.where(df['clean_text'].str.contains('detroit|redwings|lgrw'), 'Detroit Red Wings', df.DET)
+    df['EDM'] = pd.np.where(df['clean_text'].str.contains('edmonton|oilers|oil'), 'Edmonton Oilers', df.EDM)
+    df['FLA'] = pd.np.where(df['clean_text'].str.contains('florida|panthers|flapanthers'), 'Florida Panthers', df.FLA)
+    df['LAK'] = pd.np.where(df['clean_text'].str.contains('los angeles|kings|gokingsgo'), 'Los Angeles Kings', df.LAK)
+    df['MIN'] = pd.np.where(df['clean_text'].str.contains('minnesota|wild|mnwild|minny|guerin'), 'Minnesota Wild', df.MIN)
+    df['MTL'] = pd.np.where(df['clean_text'].str.contains('montreal|canadiens|habs|gohabsgo'), 'Montreal Canadiens', df.MTL)
+    df['NSH'] = pd.np.where(df['clean_text'].str.contains('nashville|predators|preds'), 'Nashville Predators', df.NSH)
+    df['NJD'] = pd.np.where(df['clean_text'].str.contains('new jersey|devils|njdevils'), 'New Jersey Devils', df.NJD)
+    df['NYI'] = pd.np.where(df['clean_text'].str.contains('new york islanders|islanders|isles'), 'New York Islanders', df.NYI)
+    df['NYR'] = pd.np.where(df['clean_text'].str.contains('new york rangers|rangers|nyr'), 'New York Rangers', df.NYR)
+    df['OTT'] = pd.np.where(df['clean_text'].str.contains('ottawa|senators|sens|gosensgo'), 'Ottawa Senators', df.OTT)
+    df['PHI'] = pd.np.where(df['clean_text'].str.contains('philadelphia|flyers|anytimeanywhere'), 'Philadelphia Flyers', df.PHI)
+    df['PIT'] = pd.np.where(df['clean_text'].str.contains('pittsburgh|penguins|pens|letsgopens|pitts'), 'Pittsburgh Penguins', df.PIT)
+    df['SJS'] = pd.np.where(df['clean_text'].str.contains('san jose|sharks|sjsharks'), 'San Jose Sharks', df.SJS)
+    df['SEA'] = pd.np.where(df['clean_text'].str.contains('seattle|kraken|seakraken'), 'Seattle Kraken', df.SEA)
+    df['STL'] = pd.np.where(df['clean_text'].str.contains('stlouis|st. louis|st louis|blues|stlblues'), 'St Louis Blues', df.STL)
+    df['TBL'] = pd.np.where(df['clean_text'].str.contains('tampa bay|lightning|tampa|gobolts'), 'Tampa Bay Lightning', df.TBL)
+    df['TOR'] = pd.np.where(df['clean_text'].str.contains('toronto|maple leafs|leafsforever|leafs|dubas'), 'Toronto Maple Leafs', df.TOR)
+    df['VAN'] = pd.np.where(df['clean_text'].str.contains('vancouver|canucks|nucks|benning'), 'Vancouver Canucks', df.VAN) 
+    df['VGK'] = pd.np.where(df['clean_text'].str.contains('vegas|golden knights|knights|#vegasborn'), 'Vegas Golden Knights', df.VGK)
+    df['WSH'] = pd.np.where(df['clean_text'].str.contains('washington|capitals|caps|allcaps'), 'Washington Capitals', df.WSH)
+    df['WPG'] = pd.np.where(df['clean_text'].str.contains('winnipeg|jets|gojetsgo'), 'Winnipeg Jets', df.WPG)
+
+    # Define columns to concatenate
+    cols = ['ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'SEA', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
+    # Concatenate columns
+    df['teams_concat'] = df[cols].apply(lambda x: ','.join(x), axis=1)
+    # Replace 0s with nothing
+    df['teams_concat'] = df.teams_concat.str.replace('0,|0|,0','').str.strip()
+    # ind variable - if multiple commas exist (proxy for num of teams), then 1 else 0
+    df['multiple_teams'] = np.where(df.teams_concat.str.contains(","), 1, 0)
+    # ind variable - if the length of teams_concat is equal to 0 (proxy for no teams matched), then 1 else 0
+    df['no_matches'] = np.where(df.teams_concat.str.len() == 0, 1, 0)
+
+    # Stash a dataframe with those tweets that were paired with a keyword
+    df_match = df.loc[df['no_matches'] != 1]
+    # Stash a dataframe with those tweets that were never paired to a keyword 
+    df_nomatch = df.loc[df['no_matches'] == 1]
+    # Select columns
+    df_nomatch = df_nomatch[['id', 'user', 'created_at', 'full_text', 'clean_text', 'multiple_teams', 'no_matches', 'teams_concat', 'rt_count', 'fav_count', 'follower_ct', 'verified', 'is_rt', 'reply_id', "company", "account_type"]]
+
+    # Melt the dataframe such that each row is equal to a tweet that was matched to a team's keyword (introducing dups to tweets)
+    melted_df = df.melt(
+                    id_vars = ['id', 'user', 'created_at', 'full_text', 'clean_text', 'multiple_teams', 'no_matches', 'teams_concat', 'rt_count', 'fav_count', 'follower_ct', 'verified',  'is_rt', 'reply_id', "company", "account_type"],
+                    value_vars = ['ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'SEA', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG'],
+                    var_name = 'nhl_team_abbr',
+                    value_name = "nhl_team"
+                    )
+    # Filter out 0s 
+    melted_df = melted_df.loc[melted_df['nhl_team'] != '0']
+
+    # Add feature parity to df_nomatch
+    df_nomatch['nhl_team_abbr'] = 'Unknown' 
+    df_nomatch['nhl_team'] = 'Unknown' 
+
+    # Append df_nomatch to melted_df to get df_clean
+    df_clean = melted_df.append(df_nomatch)
+
+    # Show a few rows of data
+    df_clean.head(5)
+    #print('total rows:', len(df_clean),'melted_rows:', (len(melted_df)), 'nomatch_rows:', len(df_nomatch))
+
+    # Extend df_clean by joining in data about the team
+    df_merged = pd.merge(df_clean, teams, on = 'nhl_team', how = 'left', indicator = True).astype("object")
+    
+    return df_merged, df, df_match, df_nomatch
+
+
+# Function 6
 #-----------------
 def feature_extract(df):
     #TODO: add emoticons and emojis to this! and other punctuation
@@ -244,7 +526,7 @@ def feature_extract(df):
     df['uppercase_ct'] = df.full_text.apply(lambda x: len([x for x in x.split() if x.isupper()]))
     return df
 
-# Function 5a
+# Function 7a
 #-------------
 def round1_text_clean(text):
     emoji_pattern = re.compile("["
@@ -284,11 +566,11 @@ def round1_text_clean(text):
     text = text.strip() # strip text
     return text
 
-# Function 5b
+# Function 7b
 #-------------
 text_clean_round1 = lambda x: round1_text_clean(x)
 
-# Function 6
+# Function 8
 #-------------
 def text_clean_round2(text):
     """
@@ -305,7 +587,7 @@ def text_clean_round2(text):
     words = re.sub(r'[^\w\s]', '', text).split()
     return [wnl.lemmatize(word) for word in words if word not in stopwords]
 
-# Function 7
+# Function 9
 #-------------
 def text_clean_round3(text):
     #TODO: add emoticons and emojis to this!
@@ -317,7 +599,7 @@ def text_clean_round3(text):
     text = text.apply(lambda x: " ".join(x for x in x.split() if x not in stopwords))
     return text
 
-# Function 8a
+# Function 10a
 #-----------------
 def tweets_ngrams(n, top_n, df):
     """
@@ -330,7 +612,7 @@ def tweets_ngrams(n, top_n, df):
     result = (pd.Series(data = nltk.ngrams(words, n), name = 'frequency').value_counts())[:top_n]
     return result.to_frame()
 
-# Function 8b
+# Function 10b
 #-----------------
 def all_ngrams(top_n, df):
     text = df.clean_text
@@ -345,7 +627,7 @@ def all_ngrams(top_n, df):
     result['ngram_nm'] = result.index
     return result
 
-# Function 9
+# Function 11
 #----------------
 
 # Credit: https://jackmckew.dev/sentiment-analysis-text-cleaning-in-python-with-vader.html
@@ -365,7 +647,7 @@ def get_sentiment_scores(df, data_column):
     df[f'compound_score'] = df[data_column].astype(str).apply(lambda x: get_sentiment(x,sid_analyzer,'compound'))
     return df
 
-# Function 10
+# Function 12
 #----------------
 # Credit: https://www.dataquest.io/blog/tutorial-add-column-pandas-dataframe-based-on-if-else-condition/
 
@@ -386,7 +668,7 @@ def sentiment_classifier(df, data_column):
     df['sentiment'] = np.select(condlist = conditions, choicelist = values)
     return df
 
-# Function 11
+# Function 13
 #----------------
 
 # Credit: https://ourcodingclub.github.io/tutorials/topic-modelling-python/
@@ -418,7 +700,7 @@ def lda_topics(data, number_of_topics, no_top_words, min_df, max_df):
     return pd.DataFrame(topic_df)
 
 
-# Function 12
+# Function 14
 #----------------
 # Credit: https://ourcodingclub.github.io/tutorials/topic-modelling-python/
 
@@ -432,7 +714,7 @@ def display_topics(model, feature_names, no_top_words):
     return pd.DataFrame(topic_dict)
 
 
-# Function 13
+# Function 15
 #---------------
 def sent_to_words(sentences):
     for sentence in sentences:
@@ -476,7 +758,7 @@ def LDA_viz(data):
     
     return LDAvis_prepared
 
-# Function 14
+# Function 16
 #----------------
 # Credit: https://jackmckew.dev/sentiment-analysis-text-cleaning-in-python-with-vader.html
 
@@ -488,7 +770,7 @@ def print_top_n_tweets(df, sent_type, num_rows):
     top_tweets.index = top_tweets.index + 1 
     return top_tweets
 
-# Function 15
+# Function 17
 #----------------
 # Function to convert  
 def word_cloud_all(df, wordcloud_words): 
@@ -503,7 +785,7 @@ def word_cloud_all(df, wordcloud_words):
     wordcloud = WordCloud(max_font_size=80, max_words=wordcloud_words, background_color="white", height=100).generate(str2)
     return wordcloud
 
-# Function 16
+# Function 18
 #----------------
 # Function to convert  
 def word_cloud_sentiment(df, sent_type, num_rows, wordcloud_words): 
@@ -520,7 +802,7 @@ def word_cloud_sentiment(df, sent_type, num_rows, wordcloud_words):
     wordcloud = WordCloud(max_font_size=100, max_words=wordcloud_words, background_color="white").generate(str2)
     return wordcloud
 
-# Function 17
+# Function 19
 #----------------
 # Function to plot default wordcloud
 def default_wordcloud(text_sentiment):
@@ -549,7 +831,7 @@ def default_wordcloud(text_sentiment):
     
     return 
 
-# Function 18
+# Function 20
 #----------------
 # Function to plot wordcloud that changes
 def plot_wordcloud(submitted2, score_type, text_sentiment, wordcloud_words, top_n_tweets):
@@ -594,7 +876,7 @@ def plot_wordcloud(submitted2, score_type, text_sentiment, wordcloud_words, top_
     
     return 
 
-# Function 19a
+# Function 21a
 #----------------
 # Function to display topics and related keywords
 def print_lda_keywords(data, number_of_topics):
@@ -609,7 +891,7 @@ def print_lda_keywords(data, number_of_topics):
         # increments topic number by 1 so that each theme printed out will have a new number
         topic_num += 1
 
-# Function 19b
+# Function 21b
 #----------------
 # Function to display topics, related keywords, and weights
 def print_lda_keywords_weight(data, number_of_topics):
@@ -623,88 +905,6 @@ def print_lda_keywords_weight(data, number_of_topics):
         st.warning('**Theme #**' + str(topic_num) + '**:** ' + list_topic_words_weight)
         # increments topic number by 1 so that each theme printed out will have a new number
         topic_num += 1
-
-# Function 20
-#----------------
-# Function to create dataframe of most recent 400 tweets from a specific user
-def get_user_tweets(screen_name):
-    #Twitter only allows access to a users most recent 3240 tweets with this method
-    #Adapted by: https://gist.github.com/yanofsky/5436496?fbclid=IwAR12gb56FOxTNI6R3SfiwpnbPpTvKLoeGR3kP0peQ1nGilcwsF8bR0LSVqE
-    
-    # Set up Twitter API access
-    # Define access keys and tokens
-    consumer_key = st.secrets['consumer_key']
-    consumer_secret = st.secrets['consumer_secret']
-    access_token = st.secrets['access_token']
-    access_token_secret = st.secrets['access_token_secret']
-
-    auth = tw.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
-    api = tw.API(auth, wait_on_rate_limit = True)
-
-    #initialize a list to hold all the tweepy Tweets
-    alltweets = []  
-    
-    #make initial request for most recent tweets (200 is the maximum allowed count)
-    new_tweets = api.user_timeline(screen_name = screen_name,count=200)
-    
-    #save most recent tweets
-    alltweets.extend(new_tweets)
-    
-    #save the id of the oldest tweet less one
-    oldest = alltweets[-1].id - 1
-    
-    #keep grabbing tweets until there are no tweets left to grab
-    #loop through twice (0 to 1) to get 400 tweets
-    for i in range(1):
-        
-        #all subsiquent requests use the max_id param to prevent duplicates
-        new_tweets = api.user_timeline(screen_name = screen_name,count=200,max_id=oldest)
-        
-        #save most recent tweets
-        alltweets.extend(new_tweets)
-        
-        #update the id of the oldest tweet less one
-        oldest = alltweets[-1].id - 1
-        i +=1
-    
-    #transform the tweepy tweets into a 2D array that will populate the csv 
-    outtweets = [[tweet.user.screen_name, tweet.id_str, tweet.created_at, tweet.text, tweet.retweet_count, tweet.favorite_count] for tweet in alltweets]
-
-    #transform 2D array into pandas dataframe
-    df_tweets = pd.DataFrame(data=outtweets, columns=['user', 'id', 'created_at', 'full_text', 'rt_count', 'fav_count'])
-
-    return df_tweets
-
-
-# Function 21
-#----------------
-# Return recent tweets for list of Twitter accounts specified in /assets/nhl_app_accounts.csv
-def insider_recent_tweets():
-
-    # Get list of Twitter accounts
-    df_accounts = pd.read_csv('assets/nhl_app_accounts.csv')
-
-    # Remove @ from username
-    df_accounts['clean_account_ids'] = df_accounts['account_id'].str.replace("@", "")
-
-    # Create list of accounts
-    list_accounts = df_accounts['clean_account_ids'].tolist()
-
-    # Create empty dataframe to append tweets in the for loop below
-    df_user_tweets = pd.DataFrame()
-
-    # Iterates through list of accounts, gets most recents tweets for each account, and appends to dataframe
-    for i in range(len(list_accounts)):
-        # Uses function 20 to get tweets for each account
-        new_user_tweets = get_user_tweets(list_accounts[i])
-        # Append tweets to dataframe
-        df_user_tweets = df_user_tweets.append(new_user_tweets)
-
-    # Reset dataframe index
-    df_user_tweets = df_user_tweets.reset_index(drop=True)
-
-    return df_user_tweets
 
   
 # Function 22
@@ -761,7 +961,15 @@ def group_nhl_data(df_sentiment):
   
 # Function 23
 #----------------
-def load_message(user_num_tweets):
+def load_fan_message(user_num_tweets):
     st.success('🎈Done! We got you the last ' + 
                 user_num_tweets + 
                 ' tweets about the NHL Expansion Draft')
+
+# Function 23
+#----------------
+def load_insider_message(total_tweets):
+    tweets_num = str(total_tweets)
+    st.success('🎈Done! We got you  ' +
+                tweets_num +
+                ' tweets from NHL Insiders in the last 48h')
