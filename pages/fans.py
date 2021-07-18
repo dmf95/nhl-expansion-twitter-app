@@ -61,8 +61,8 @@ def app():
         with st.sidebar:
             team_cols = ['All', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
             team_choice = st.multiselect('1. Filter for specifc NHL team(s)', team_cols, default = 'All', help = 'Replace `All` with other NHL team(s) to compare against the Kraken.')
-            rt_choice = st.radio('2. Include tweets about multiple teams?', options = ['Yes', 'No'], help = 'Change to `No` if you only want to see tweets that we think matches a single team')
-            num_of_tweets = st.number_input('2. Maximum number of tweets', min_value=500, max_value=10000, value = 100, step = 100, help = 'Returns the most recent tweets within the last 7 days')
+            mult_choice = st.radio('2. Include tweets about multiple teams?', options = ['Yes', 'No'], help = 'Change to `No` if you only want to see tweets that we think match only a single team')
+            num_of_tweets = st.number_input('3. Maximum number of tweets', min_value=100, max_value=10000, value = 500, step = 100, help = 'Returns the most recent tweets within the last 7 days')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
 
@@ -120,6 +120,11 @@ def app():
         team_choice.append("SEA") # always include Kraken
         boolean_series = df_sentiment.nhl_team_abbr.isin(team_choice) # list to filter by
         df_sentiment = df_sentiment[boolean_series] # filter df_sentiment by list
+    # If mult_choice (multi teams choice) is true, don't filter else filter for tweets that do not have multi_team matches
+    if mult_choice == 'Yes':
+        df_sentiment = df_sentiment
+    elif mult_choice == 'No':
+        df_sentiment = df_sentiment[df_sentiment['multiple_teams'] == '0'] # only show rows that do not have mult team matches
 
     # Sentiment group dataframe
     expansion_group2, team_group2, kraken, kraken_total, kraken_negative, kraken_neutral, kraken_positive, rol, rol_total, rol_negative, rol_neutral, rol_positive, unknown, unknown_total, unknown_negative, unknown_negative, unknown_neutral, unknown_positive = nf.group_nhl_data(df_sentiment)
