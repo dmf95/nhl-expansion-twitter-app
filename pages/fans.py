@@ -62,7 +62,7 @@ def app():
             team_cols = ['All', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
             team_choice = st.multiselect('1. Filter for specifc NHL team(s)', team_cols, default = 'All', help = 'Replace `All` with other NHL team(s) to compare against the Kraken.')
             rt_choice = st.radio('2. Include tweets about multiple teams?', options = ['Yes', 'No'], help = 'Change to `No` if you only want to see tweets that we think matches a single team')
-            num_of_tweets = st.number_input('2. Maximum number of tweets', min_value=100, max_value=10000, value = 100, step = 100, help = 'Returns the most recent tweets within the last 7 days')
+            num_of_tweets = st.number_input('2. Maximum number of tweets', min_value=500, max_value=10000, value = 100, step = 100, help = 'Returns the most recent tweets within the last 7 days')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
 
