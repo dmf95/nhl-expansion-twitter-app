@@ -509,8 +509,6 @@ def app():
     ## 4.5.2: Topic Model table
     ##----------------------------------##
 
-    st.dataframe(df_sentiment)
-
     # Define data variable
     data = df_topics.clean_text
 
