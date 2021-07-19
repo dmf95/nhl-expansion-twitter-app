@@ -65,7 +65,7 @@ app.run() # Run the main app
 ##----------------------------------##
 side.text("") # spacing
 side.header('Developer Contact')
-side.write("[![Star](https://img.shields.io/github/stars/shannonhlo/twitter-streamlit-app.svg?logo=github&style=social)](https://github.com/shannonhlo/twitter-streamlit-app/branches)")
-side.write("[![Follow](https://img.shields.io/twitter/follow/shannonhlo26?style=social)](https://twitter.com/shannonhlo26)")
+side.write("[![Star](https://img.shields.io/github/stars/dmf95/nhl-expansion-twitter-app.svg?logo=github&style=social)](https://github.com/dmf95/nhl-expansion-twitter-app)")
 side.write("[![Follow](https://img.shields.io/twitter/follow/DomenicFayad?style=social)](https://twitter.com/DomenicFayad)")
+side.write("[![Follow](https://img.shields.io/twitter/follow/shannonhlo26?style=social)](https://twitter.com/shannonhlo26)")
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-

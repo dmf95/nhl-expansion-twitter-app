@@ -61,8 +61,8 @@ def app():
         with st.sidebar:
             team_cols = ['All', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
             team_choice = st.multiselect('1. Filter for specifc NHL team(s)', team_cols, default = 'All', help = 'Replace `All` with other NHL team(s) to compare against the Kraken.')
-            rt_choice = st.radio('2. Include tweets about multiple teams?', options = ['Yes', 'No'], help = 'Change to `No` if you only want to see tweets that we think matches a single team')
-            num_of_tweets = st.number_input('2. Maximum number of tweets', min_value=500, max_value=10000, value = 100, step = 100, help = 'Returns the most recent tweets within the last 7 days')
+            mult_choice = st.radio('2. Include tweets about multiple teams?', options = ['Yes', 'No'], help = 'Change to `No` if you only want to see tweets that we think match only a single team')
+            num_of_tweets = st.number_input('3. Change the number of tweets?', min_value=100, max_value=10000, value = 1000, step = 100, help = 'Increase or decrease the number of tweets to return. Returns in order of recency, maxes out at 10k tweets, or 7 elapsed days')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
 
@@ -88,16 +88,16 @@ def app():
     # Run function 2: Get twitter data 
     df_tweets, df_new = nf.twitter_get_nhl(num_of_tweets)
 
-    # Run function 3: Get classified nhl teams data    
+    # Run function 5: Get classified nhl teams data      
     df_nhl, df_original, df_match, df_nomatch = nf.classify_nhl_team(df_tweets)
 
-    # Run function #4: Feature extraction
+    # Run function #6: Feature extraction
     df_tweets = nf.feature_extract(df_tweets)
 
-    # Run function #5: Round 1 text cleaning (convert to lower, remove numbers, @, punctuation, numbers. etc.)
+    # Run function #7: Round 1 text cleaning (convert to lower, remove numbers, @, punctuation, numbers. etc.)
     df_tweets['clean_text'] = df_tweets.clean_text.apply(nf.text_clean_round1)
 
-    ## Run function #7: Round 3 text cleaning (remove stop words)
+    ## Run function #9: Round 3 text cleaning (remove stop words)
     df_tweets.clean_text  = nf.text_clean_round3(df_tweets.clean_text)
 
     #Read in teams & accounts CSVs
@@ -112,14 +112,19 @@ def app():
     # Add sentiment classification
     text_sentiment = nf.sentiment_classifier(df_nhl, 'compound_score')
 
-    # Select columns from text_sentiment
-    df_sentiment = text_sentiment[['id', 'created_at', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
+    # User input filter on df_sentiment
+    df_sentiment = nf.filter_fan_rows(team_choice, mult_choice, text_sentiment)
+
+    # Combine original dataset that has text cleaning (df_tweets) with the classified data with dups (df_sentiment)
+    # Take important columns, remove any dups
+    df_topics = pd.merge(df_tweets, df_sentiment[['id', 'multiple_teams', 'sentiment','compound_score', 'positive_score', 'neutral_score','negative_score']], on = 'id', how = 'inner', indicator = True).astype("object")
+    df_topics.drop_duplicates(subset ="id", keep = "first", inplace = True)
     
-    # If user choice "All teams", dont filter else filter by selected teams + Kraken
-    if 'All' not in team_choice:
-        team_choice.append("SEA") # always include Kraken
-        boolean_series = df_sentiment.nhl_team_abbr.isin(team_choice) # list to filter by
-        df_sentiment = df_sentiment[boolean_series] # filter df_sentiment by list
+    # Needed to convert some objects back into float (others too but they aren't being used)
+    df_topics["compound_score"] = df_topics.compound_score.astype(float)
+    df_topics["positive_score"] = df_topics.positive_score.astype(float)
+    df_topics["neutral_score"] = df_topics.neutral_score.astype(float)
+    df_topics["negative_score"] = df_topics.negative_score.astype(float)
 
     # Sentiment group dataframe
     expansion_group2, team_group2, kraken, kraken_total, kraken_negative, kraken_neutral, kraken_positive, rol, rol_total, rol_negative, rol_neutral, rol_positive, unknown, unknown_total, unknown_negative, unknown_negative, unknown_neutral, unknown_positive = nf.group_nhl_data(df_sentiment)
@@ -129,7 +134,7 @@ def app():
     # 3.2: Define Key Variables
     #------------------------------------#
     user_num_tweets =str(int(num_of_tweets))
-    total_tweets = len(df_original['full_text'])
+    total_tweets = len(df_original['full_text']) # does NOT take into account filter (insider view does)
     match_tweets = len(df_match['full_text'])
     nomatch_tweets = len(df_nomatch['full_text'])
 
@@ -312,8 +317,8 @@ def app():
     top_n_tweets = int(top_n_tweets)
     wordcloud_words  = int(wordcloud_words)
     
-    nf.plot_wordcloud(submitted2, score_type, df_sentiment, wordcloud_words, top_n_tweets)
 
+    nf.plot_wordcloud(submitted2, score_type, df_topics, wordcloud_words, top_n_tweets)
 
     ## 4.3.4: Plot top tweets
     ##----------------------------------##
@@ -341,7 +346,7 @@ def app():
         score_nickname = 'Negative'
 
     # Run the top n tweets
-    top_tweets_res = nf.print_top_n_tweets(df_sentiment, score_type_nm, top_n_tweets)
+    top_tweets_res = nf.print_top_n_tweets(df_topics, score_type_nm, top_n_tweets)
 
     # Conditional title
     str_num_tweets = str(top_n_tweets)
@@ -502,10 +507,9 @@ def app():
     ##----------------------------------##
 
     # Define data variable
-    data = df_tweets['clean_text']
+    data = df_topics.clean_text
 
     topic_view_option = topic_expander.radio('Choose display options', ('Default view', 'Analyst view (advanced options)'))
-
 
     if topic_view_option == 'Default view':
         # Topic model expander form submit for topic model table & visual
