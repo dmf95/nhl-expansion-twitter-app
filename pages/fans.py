@@ -59,7 +59,7 @@ def app():
     ##----------------------------------##
     with st.form(key ='form_1'):
         with st.sidebar:
-            team_cols = ['All Teams', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
+            team_cols = ['All', 'ANA', 'ARZ', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'STL', 'TBL', 'TOR', 'VAN', 'VGK', 'WSH', 'WPG']
             team_choice = st.multiselect('1. Filter for specifc NHL team(s)', team_cols, default = 'All', help = 'Replace `All` with other NHL team(s) to compare against the Kraken.')
             rt_choice = st.radio('2. Include tweets about multiple teams?', options = ['Yes', 'No'], help = 'Change to `No` if you only want to see tweets that we think matches a single team')
             num_of_tweets = st.number_input('2. Maximum number of tweets', min_value=100, max_value=10000, value = 100, step = 100, help = 'Returns the most recent tweets within the last 7 days')
@@ -302,11 +302,16 @@ def app():
         score_type = st.selectbox('Select sentiment', ['All', 'Positive', 'Neutral', 'Negative'])
         wordcloud_words = st.number_input('Choose the max number of words for the word cloud', 15)
         top_n_tweets =  st.number_input('Choose the top number of tweets *', 3)
-        submitted2 = st.form_submit_button('Regenerate Wordcloud', help = 'Re-run the Wordcloud with the current inputs')
+        submitted2 = st.form_submit_button('Regenerate Wordcloud', help = 'Re-run the Wordcloud with the current inputs')    
 
 
     ## 4.3.3: Plot wordcloud
     ##----------------------------------##
+    
+    # Turn user selection from float to integer
+    top_n_tweets = int(top_n_tweets)
+    wordcloud_words  = int(wordcloud_words)
+    
     nf.plot_wordcloud(submitted2, score_type, df_sentiment, wordcloud_words, top_n_tweets)
 
 
