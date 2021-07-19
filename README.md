@@ -8,10 +8,11 @@
 * [Introduction](#introduction)
 * [Methodology](#methodology)
 * [App overview](#app-overview)
-* [Developer setup](#developer-setup)
+* [Setup](#setup)
 * [How to use the app](#how-to-use-the-app)
 * [Future releases](#future-releases)
 * [Resources](#resources)
+* [Developer contact](#developer-contact)
 
 ## Introduction
 ---
@@ -106,7 +107,7 @@ Similar to the Fan-analyzer page, the goal of this page is to estimate sentiment
 This required using the Twitter Timeline API endpoint, which provides all the tweets posted by a specified user. Our logic simply loops through the aforementioned list of accounts and returns all of the tweets posted within 48 hours. Following this, similar transformations are made to deliver text analytics insight and data visualizations.
 
 
-## Developer setup
+## Setup
 ---
 ### Setting up
 To run this app on your own, either `fork` this repository, or `git clone` into your local. 
@@ -143,4 +144,10 @@ Coming soon! We are working on putting a visual demo here.
 * https://jackmckew.dev/sentiment-analysis-text-cleaning-in-python-with-vader.html
 * https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806
 * https://stackabuse.com/accessing-the-twitter-api-with-python
+
+## Developer contact
+---
+* [Domenic Fayad](https://www.fullstaxx.com/)
+* [Shannon Lo](https://shannonhlo.github.io/)
+
 
