@@ -126,10 +126,6 @@ def app():
     df_topics["neutral_score"] = df_topics.neutral_score.astype(float)
     df_topics["negative_score"] = df_topics.negative_score.astype(float)
 
-    st.write(df_sentiment.dtypes, df_topics.dtypes)
-    st.dataframe(df_topics)
-
-
     # Sentiment group dataframe
     expansion_group2, team_group2, kraken, kraken_total, kraken_negative, kraken_neutral, kraken_positive, rol, rol_total, rol_negative, rol_neutral, rol_positive, unknown, unknown_total, unknown_negative, unknown_negative, unknown_neutral, unknown_positive = nf.group_nhl_data(df_sentiment)
 
