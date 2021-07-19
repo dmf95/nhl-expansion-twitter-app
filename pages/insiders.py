@@ -62,7 +62,7 @@ def app():
             #company_choice = st.multiselect('2. Filter by specific Sports Station(s)?', options = company_cols, default = 'All', help = 'Remove and replace `All` with other Sports Station(s)')
             account_choice = st.radio('2. Include Hockey Analytics & Reporters?', options = ['Both', 'Hockey Analytics', 'Hockey Reporters'], help = 'Select `Hockey Analytics` or `Hockey Reporters` to filter tweets')
             rt_choice = st.radio('3. Include Retweets?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `retweets`')
-            reply_choice = st.radio('4. Include Replies?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `replies`')
+            reply_choice = st.radio('4. Include Replies?', options = ['Yes', 'No'], help = 'Change to `No` if you want to exclude `replies`')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
 
@@ -125,10 +125,6 @@ def app():
     df_topics["positive_score"] = df_topics.positive_score.astype(float)
     df_topics["neutral_score"] = df_topics.neutral_score.astype(float)
     df_topics["negative_score"] = df_topics.negative_score.astype(float)
-
-    st.write(df_sentiment.dtypes, df_topics.dtypes)
-    st.dataframe(df_topics)
-
 
     # Sentiment group dataframe
     expansion_group2, team_group2, kraken, kraken_total, kraken_negative, kraken_neutral, kraken_positive, rol, rol_total, rol_negative, rol_neutral, rol_positive, unknown, unknown_total, unknown_negative, unknown_negative, unknown_neutral, unknown_positive = nf.group_nhl_data(df_sentiment)

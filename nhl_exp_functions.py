@@ -233,20 +233,22 @@ def insider_recent_tweets():
 # filter based on df_sentiment?
 
 # df 1 = df_sentiment (has dups, has team classifications)
-def filter_fan_rows(team_choice, df):
+def filter_fan_rows(team_choice, mult_choice, df):
     
     # Select columns from text_sentiment
-    df = df[['id', 'user', 'created_at',  'is_rt', 'reply_id', 'company', 'account_type', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
+    df = df[['id', 'created_at', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
 
-    # Create ind variable: if reply_id is null, False else True
-    df['is_reply'] = np.where(pd.isnull(df.reply_id), 'False', 'True')
-
-    # If team_choice "All ", dont filter else filter by selected teams + Kraken
+    # If user choice "All teams", dont filter else filter by selected teams + Kraken
     if 'All' not in team_choice:
         team_choice.append("SEA") # always include Kraken
         boolean_series = df.nhl_team_abbr.isin(team_choice) # list to filter by
         df = df[boolean_series] # filter df_sentiment by list
-        #msg1 = "Filtered list of NHL teams"
+    
+    # If mult_choice (multi teams choice) is true, don't filter else filter for tweets that do not have multi_team matches
+    if mult_choice == 'Yes':
+        df = df
+    elif mult_choice == 'No':
+        df = df[df['multiple_teams'] == 0] # only show rows that do not have mult team matches
 
     return df
 
@@ -378,7 +380,7 @@ def classify_nhl_team(df):
     df['PHI'] = pd.np.where(df['clean_text'].str.contains('philadelphia|flyers|anytimeanywhere'), 'Philadelphia Flyers', df.PHI)
     df['PIT'] = pd.np.where(df['clean_text'].str.contains('pittsburgh|penguins|pens|letsgopens|pitts'), 'Pittsburgh Penguins', df.PIT)
     df['SJS'] = pd.np.where(df['clean_text'].str.contains('san jose|sharks|sjsharks'), 'San Jose Sharks', df.SJS)
-    df['SEA'] = pd.np.where(df['clean_text'].str.contains('seattle|kraken|seakraken'), 'Seattle Kraken', df.SEA)
+    df['SEA'] = pd.np.where(df['clean_text'].str.contains('seattle|kraken|seakraken|francis'), 'Seattle Kraken', df.SEA)
     df['STL'] = pd.np.where(df['clean_text'].str.contains('stlouis|st. louis|st louis|blues|stlblues'), 'St Louis Blues', df.STL)
     df['TBL'] = pd.np.where(df['clean_text'].str.contains('tampa bay|lightning|tampa|gobolts'), 'Tampa Bay Lightning', df.TBL)
     df['TOR'] = pd.np.where(df['clean_text'].str.contains('toronto|maple leafs|leafsforever|leafs|dubas'), 'Toronto Maple Leafs', df.TOR)
@@ -510,7 +512,7 @@ def classify_nhl_team_insider(df1):
     df['PHI'] = pd.np.where(df['clean_text'].str.contains('philadelphia|flyers|anytimeanywhere'), 'Philadelphia Flyers', df.PHI)
     df['PIT'] = pd.np.where(df['clean_text'].str.contains('pittsburgh|penguins|pens|letsgopens|pitts'), 'Pittsburgh Penguins', df.PIT)
     df['SJS'] = pd.np.where(df['clean_text'].str.contains('san jose|sharks|sjsharks'), 'San Jose Sharks', df.SJS)
-    df['SEA'] = pd.np.where(df['clean_text'].str.contains('seattle|kraken|seakraken'), 'Seattle Kraken', df.SEA)
+    df['SEA'] = pd.np.where(df['clean_text'].str.contains('seattle|kraken|seakraken|francis'), 'Seattle Kraken', df.SEA)
     df['STL'] = pd.np.where(df['clean_text'].str.contains('stlouis|st. louis|st louis|blues|stlblues'), 'St Louis Blues', df.STL)
     df['TBL'] = pd.np.where(df['clean_text'].str.contains('tampa bay|lightning|tampa|gobolts'), 'Tampa Bay Lightning', df.TBL)
     df['TOR'] = pd.np.where(df['clean_text'].str.contains('toronto|maple leafs|leafsforever|leafs|dubas'), 'Toronto Maple Leafs', df.TOR)

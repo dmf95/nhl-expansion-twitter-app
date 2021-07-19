@@ -10,7 +10,10 @@
 * [Setup](#setup)
 * [In Progress](#in-progress)
 
-## Project Purpose
+## Glorious Purpose
+The purpose of this project is to **explore Twitter sentiment** during the Seattle Kraken's 2022 **NHL Expansion Draft**.
+
+## How To
 The purpose of this project is to **explore Twitter sentiment** during the Seattle Kraken's 2022 **NHL Expansion Draft**.
             
 ## Technologies
@@ -20,6 +23,15 @@ Project is created with:
 * Ament library version: 999
             
 ## Setup
+To run this project, install it locally using npm:
+
+```
+$ cd ../lorem
+$ npm install
+$ npm start
+```
+
+## In Progress
 To run this project, install it locally using npm:
 
 ```
