@@ -1,0 +1,35 @@
+﻿twitter_handle,nhl_team,conference,2022_division,2021_division,expansion_type,2021_hashtag,other_hashtag,image,primary_hex,secondary_hex,tertiary_hex
+@AnaheimDucks,Anaheim Ducks,Westernern,Pacific,West,Rest of League,#FlyTogether,#ducks,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Ducks_Primary.png,#F47A38,#B9975B,#C1C6C8
+@ArizonCoyotes,Arizona Coyotes,Western,Central,West,Rest of League,#Yotes,#coyotes,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Coyotes_Primary.png,#8C2633,#E2D6B5,#111111
+@NHLBruins,Boston Bruins,Eastern,Atlantic,East,Rest of League,#NHLBruins,#bruins,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Bruins_Primary.png,#FFB81C,#000000,
+@NHLFlames,Buffalo Sabres,Eastern,Atlantic,East,Rest of League,#LetsGoBuffalo,#sabres,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Sabres_Primary.png,#002654,#FCB514,#ADAFAA
+@NHLCanes,Calgary Flames,Western,Pacific,North,Rest of League,#CofRed,#flames,http://www.capsinfo.com/images/NHL_Team_Logos/calgary.png,#C8102E,#F1BE48,#111111
+@NHLBlackhawks,Carolina Hurricanes,Eastern,Metropolitan,Central,Rest of League,#LetsGoCanes,#hurricanes,http://www.capsinfo.com/images/NHL_Team_Logos/carolina.png,#CC0000,#000000,#A2AAAD
+@Avalanche,Chicago Blackhawks,Western,Central,Central,Rest of League,#Blackhawks,#blackhawks,http://www.capsinfo.com/images/NHL_Team_Logos/chicago.png,#CF0A2C,#FF671B,#00833E
+@BlueJacketsNHL,Colorado Avalanche,Western,Central,West,Rest of League,#GoAvsGo,#avalanche,http://www.capsinfo.com/images/NHL_Team_Logos/colorado.png,#6F263D,#236192,#A2AAAD
+@BlueJacketsNHL,Columbus Blue Jackets,Eastern,Metropolitan,Central,Rest of League,#CBJ,#jackets,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_BlueJackets_Primary.png,#002654,#CE1126,#A4A9AD
+@DallasStars,Dallas Stars,Western,Central,Central,Rest of League,#GoStars,#stars,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Stars_Primary.png,#006847,#8F8F8C,#111111
+@DetroitRedWings,Detroit Red Wings,Eastern,Atlantic,Central,Rest of League,#LGRW,#wings,http://www.capsinfo.com/images/NHL_Team_Logos/detroit.png,#CE1126,#FFFFFF,
+@EdmontonOilers,Edmonton Oilers,Western,Pacific,North,Rest of League,#LetsGoOilers,#oilers,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Oilers_Primary.png,#041E42,#FF4C00,
+@FlaPanthers,Florida Panthers,Eastern,Atlantic,Central,Rest of League,#FlaPanthers,#panthers,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Panthers_Primary.png,#B9975B,#C8102E,#041E42
+@LAKings,Los Angeles Kings,Western,Pacific,West,Rest of League,#GoKingsGo,#kings,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Kings_Primary.png,#111111,#A2AAAD,#572A84
+@mnwild,Minnesota Wild,Western,Central,West,Rest of League,#MNWild,#wild,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Wild_Primary.png,#154734,#A6192E,#EAAA00
+@CanadiensMTL,Montreal Canadiens,Eastern,Atlantic,North,Rest of League,#GoHabsGo,#canadiens,http://www.capsinfo.com/images/NHL_Team_Logos/montreal.png,#AF1E2D,#192168,
+@PredsNHL,Nashville Predators,Western,Central,Central,Rest of League,#Preds,#predators,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Predators_Primary.png,#FFB81C,#041E42,#FFFFFF
+@NJDevils,New Jersey Devils,Eastern,Metropolitan,East,Rest of League,#NJDevils,#devils,http://www.capsinfo.com/images/NHL_Team_Logos/newjersey.png,#CE1126,#000000,#FFFFFF
+@NYIslanders,New York Islanders,Eastern,Metropolitan,East,Rest of League,#Isles,#islanders,http://www.capsinfo.com/images/NHL_Team_Logos/NY-Islanders-Primary.png,#00539B,#F47D30,
+@NYRangers,New York Rangers,Eastern,Metropolitan,East,Rest of League,#NYR,#rangers,http://www.capsinfo.com/images/NHL_Team_Logos/newyorkr.png,#0038A8,#CE1126,#FFFFFF
+@Senators,Ottawa Senators,Eastern,Atlantic,North,Rest of League,#goSENSgo,#sens,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Senators_Primary.png,#C52032,#C2912C,#000000
+@NHLFlyers,Philadelphia Flyers,Eastern,Metropolitan,East,Rest of League,#AnytimeAnywhere,#flyers,http://www.capsinfo.com/images/NHL_Team_Logos/philadelphia.gif,#F74902,#000000,#FFFFFF
+@penguins,Pittsburgh Penguins,Eastern,Metropolitan,East,Rest of League,#LetsGoPens,#penguins,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Penguins_Primary.png,#FCB514,#000000,#CFC493
+@SanJoseSharks,San Jose Sharks,Western,Pacific,West,Rest of League,#SJSharks,#sharks,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Sharks_Primary.png,#006D75,#EA7200,#000000
+@SeattleKraken,Seattle Kraken,Western,Pacific,,Kraken,#SeaKraken,#kraken,https://upload.wikimedia.org/wikipedia/en/thumb/4/48/Seattle_Kraken_official_logo.svg/1200px-Seattle_Kraken_official_logo.svg.png,#99D9D9,#001628,#355464
+@StLouisBlues,St Louis Blues,Western,Central,West,Rest of League,#STLBlues,#blues,http://www.capsinfo.com/images/NHL_Team_Logos/stlouis.png,#002F87,#FCB514,#041E42
+@TBLightning,Tampa Bay Lightning,Eastern,Atlantic,Central,Rest of League,#GoBolts,#lightning,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Lightning_Primary.png,#002868,#FFFFFF,
+@MapleLeafs,Toronto Maple Leafs,Eastern,Atlantic,North,Rest of League,#LeafsForever,#leafs,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_MapleLeafs_Primary.png,#00205B,#FFFFFF,
+@Canucks,Vancouver Canucks,Western,Pacific,North,Rest of League,#Canucks,#canucks,http://www.capsinfo.com/images/NHL_Team_Logos/Vancouver_Canucks.png,#00205B,#00843D,#041C2C
+@GoldenKnights,Vegas Golden Knights,Western,Pacific,West,Rest of League,#VegasBorn,#knights,https://upload.wikimedia.org/wikipedia/en/thumb/a/ac/Vegas_Golden_Knights_logo.svg/1200px-Vegas_Golden_Knights_logo.svg.png,#B4975A,#333F42,#C8102E
+@Capitals,Washington Capitals,Eastern,Metropolitan,East,Rest of League,#ALLCAPS,#capitals,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Capitals_Primary.png,#C8102E,#041E42,#FFFFFF
+@NHLJets,Winnipeg Jets,Western,Central,North,Rest of League,#GoJetsGo,#jets,http://www.capsinfo.com/images/NHL_Team_Logos/NHL_Jets_Primary.png,#041E42,#004C97,#AC162C
+@NHL,NHL,League,,,League,#NHL,#nhl,https://upload.wikimedia.org/wikipedia/en/thumb/3/3a/05_NHL_Shield.svg/1200px-05_NHL_Shield.svg.png,#000000,#FFFFFF,
+,Unknown,,,,Unknown,,,,,,
