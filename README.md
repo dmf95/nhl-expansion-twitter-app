@@ -6,7 +6,6 @@
 ## Table of contents
 * [Purpose](#purpose)
 * [How to use the app](#how-to)
-* [Technologies](#technologies)
 * [Developer setup](#setup)
 * [In progress](#in-progress)
 
@@ -15,12 +14,6 @@ The ~~glorious~~ purpose of this project is to **explore Twitter sentiment** dur
 
 ## How to use the app
 This section will outline how to use the app from a user perspective
-            
-## Technologies
-Project is created with:
-* Lorem version: 12.3
-* Ipsum version: 2.33
-* Ament library version: 999
             
 ## Developer setup
 This section will outline how to use the app from a developer perspective
