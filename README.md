@@ -130,7 +130,7 @@ Coming soon! We are working on putting a visual demo here.
 
 ## Future releases
 ---
-* Performance of the application and caching of results - TBA
+* Performance of the application and streamlit caching of results - TBA
 * Miro board process diagram to visualize the flow of information - TBA
 * Labeling of commits & versioning - TBA
 * Refactoring and modularization of functions - TBA
