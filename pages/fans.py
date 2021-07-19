@@ -317,8 +317,8 @@ def app():
     top_n_tweets = int(top_n_tweets)
     wordcloud_words  = int(wordcloud_words)
     
-    nf.plot_wordcloud(submitted2, score_type, df_topics, wordcloud_words, top_n_tweets)
 
+    nf.plot_wordcloud(submitted2, score_type, df_topics, wordcloud_words, top_n_tweets)
 
     ## 4.3.4: Plot top tweets
     ##----------------------------------##

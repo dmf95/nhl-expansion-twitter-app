@@ -233,6 +233,7 @@ def insider_recent_tweets():
 # filter based on df_sentiment?
 
 # df 1 = df_sentiment (has dups, has team classifications)
+
 def filter_fan_rows(team_choice, mult_choice, df):
     
     # Select columns from text_sentiment
@@ -257,6 +258,7 @@ def filter_fan_rows(team_choice, mult_choice, df):
 # INSIDERS: takes in user selections and filters out the df accordingly
 # this is an input to the topic model
 # filter based on df_sentiment?
+
 
 # df 1 = df_sentiment (has dups, has team classifications)
 def filter_insider_rows(team_choice, rt_choice, reply_choice, account_choice, df):
