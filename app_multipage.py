@@ -47,6 +47,6 @@ class multi_app:
             'Choose a page',
             self.pages,
             format_func=lambda app: app['title'],
-            help = 'Change the page to see new goodies 😏')
+            help = '`Select` another page to get started 😏')
 
         app['function']()
