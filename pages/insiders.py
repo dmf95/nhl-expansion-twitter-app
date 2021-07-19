@@ -61,8 +61,8 @@ def app():
             #company_cols = ['All', 'DFO Hockey', 'EPRinkside', 'Freelance', 'HNIC', 'Hockey Data', 'Sportsnet', 'The Athletic', 'TSN']
             #company_choice = st.multiselect('2. Filter by specific Sports Station(s)?', options = company_cols, default = 'All', help = 'Remove and replace `All` with other Sports Station(s)')
             account_choice = st.radio('2. Include Hockey Analytics & Reporters?', options = ['Both', 'Hockey Analytics', 'Hockey Reporters'], help = 'Select `Hockey Analytics` or `Hockey Reporters` to filter tweets')
-            rt_choice = st.radio('3. Include Retweets?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `retweets`')
-            reply_choice = st.radio('4. Include Replies?', options = ['Yes', 'No'], help = 'Change to `No` if you want to exclude `replies`')
+            #rt_choice = st.radio('3. Include Retweets?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `retweets`')
+            reply_choice = st.radio('3. Include Replies?', options = ['Yes', 'No'], help = 'Change to `No` if you want to exclude `replies`')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
 
@@ -86,7 +86,8 @@ def app():
             time.sleep(3)
 
     # Run function 3: Get recent tweets for each insider account
-    df_tweets = nf.insider_recent_tweets()
+    #df_tweets = nf.insider_recent_tweets() # uses timeline api
+    df_tweets, df_new = nf.search_insider_tweets(num_of_tweets=1000) # uses search api
 
     # Run function 5b: Get classified nhl teams data    
     df_nhl, df_original, df_match, df_nomatch = nf.classify_nhl_team_insider(df_tweets)
@@ -113,13 +114,15 @@ def app():
     text_sentiment = nf.sentiment_classifier(df_nhl, 'compound_score')
 
     # User input filter on df_sentiment
-    df_sentiment, msg2, msg3, msg4 = nf.filter_insider_rows(team_choice, rt_choice, reply_choice, account_choice, text_sentiment)
-      
+    df_sentiment, msg2, msg4 = nf.filter_insider_rows(team_choice, reply_choice, account_choice, text_sentiment)
+
+    
     # Combine original dataset that has text cleaning (df_tweets) with the classified data with dups (df_sentiment)
     # Take important columns, remove any dups
     df_topics = pd.merge(df_tweets, df_sentiment[['id', 'sentiment','compound_score', 'positive_score', 'neutral_score','negative_score']], on = 'id', how = 'inner', indicator = True).astype("object")
     df_topics.drop_duplicates(subset ="id", keep = "first", inplace = True)
     
+
     # Needed to convert some objects back into float (others too but they aren't being used)
     df_topics["compound_score"] = df_topics.compound_score.astype(float)
     df_topics["positive_score"] = df_topics.positive_score.astype(float)
@@ -506,6 +509,8 @@ def app():
     ## 4.5.2: Topic Model table
     ##----------------------------------##
 
+    st.dataframe(df_sentiment)
+
     # Define data variable
     data = df_topics.clean_text
 
@@ -521,14 +526,14 @@ def app():
         number_of_topics = int(top_n_tweets)
         no_top_words = int(no_top_words)
         
-        df_lda = nf.lda_topics(data, number_of_topics, no_top_words, 0.1, 0.9)
+        df_lda = nf.lda_topics(data, number_of_topics, no_top_words, 0.01, 0.99)
         nf.print_lda_keywords(df_lda, number_of_topics)
     else:
         with topic_expander.form('form_3'):
             number_of_topics = st.number_input('Choose the maximum number of topics. Start with a larger number and decrease if you see topics that are similar.',min_value=1, value=5)
             no_top_words = st.number_input('Choose the maximum number of words in each topic you want to see.',min_value=1, value=5)
-            min_df = st.number_input('Ignore words that appear less than the specified proportion (decimal number between 0 and 1).',min_value=0.0, max_value=1.0, value=0.1)
-            max_df = st.number_input('Ignore words that appear more than the specified proportion (decimal number between 0 and 1).',min_value=0.0, max_value=1.0, value=0.9)
+            min_df = st.number_input('Ignore words that appear less than the specified proportion (decimal number between 0 and 1).',min_value=0.0, max_value=1.0, value=0.01)
+            max_df = st.number_input('Ignore words that appear more than the specified proportion (decimal number between 0 and 1).',min_value=0.0, max_value=1.0, value=0.99)
             submitted3 = st.form_submit_button('Regenerate topics', help = 'Re-run topic model analysis with the current inputs')
         
         number_of_topics = int(top_n_tweets)
