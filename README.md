@@ -4,17 +4,17 @@
 > Streamlit app that hits the Twitter API and summarizes tweet sentiment from NHL fans and insiders.
 
 ## Table of contents
-* [Glorious Purpose](#glorious-purpose)
-* [How To](#how-to)
+* [Purpose](#purpose)
+* [How to use the app](#how-to)
 * [Technologies](#technologies)
-* [Setup](#setup)
-* [In Progress](#in-progress)
+* [Developer setup](#setup)
+* [In progress](#in-progress)
 
-## Glorious Purpose
-The purpose of this project is to **explore Twitter sentiment** during the Seattle Kraken's 2022 **NHL Expansion Draft**.
+## Purpose
+The ~~glorious~~ purpose of this project is to **explore Twitter sentiment** during the Seattle Kraken's 2022 **NHL Expansion Draft**.
 
-## How To
-The purpose of this project is to **explore Twitter sentiment** during the Seattle Kraken's 2022 **NHL Expansion Draft**.
+## How to use the app
+This section will outline how to use the app from a user perspective
             
 ## Technologies
 Project is created with:
@@ -22,8 +22,8 @@ Project is created with:
 * Ipsum version: 2.33
 * Ament library version: 999
             
-## Setup
-To run this project, install it locally using npm:
+## Developer setup
+This section will outline how to use the app from a developer perspective
 
 ```
 $ cd ../lorem
@@ -31,7 +31,7 @@ $ npm install
 $ npm start
 ```
 
-## In Progress
+## In progress
 To run this project, install it locally using npm:
 
 ```
