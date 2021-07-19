@@ -225,23 +225,85 @@ def insider_recent_tweets():
 
     return pd.DataFrame(df_user_tweets)
 
-# Function 4: 
+
+# Function 4a: 
 #----------------
-# takes in pandas dataframe after first twitter scrape
-# returns a pandas dataframe that has classified each tweet as relating to an nhl team
+# INSIDERS: takes in user selections and filters out the df accordingly
+# this is an input to the topic model
+# filter based on df_sentiment?
 
-def insider_join(df):
+# df 1 = df_sentiment (has dups, has team classifications)
+def filter_fan_rows(team_choice, df):
     
-    # Get list of Twitter accounts
-    df_accounts = pd.read_csv('assets/nhl_app_accounts.csv')
-    # Remove @ from username
-    df_accounts['username'] = df_accounts['account_id'].str.replace("@", "")
+    # Select columns from text_sentiment
+    df = df[['id', 'user', 'created_at',  'is_rt', 'reply_id', 'company', 'account_type', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
 
-    # Extend df_clean by joining in data about the account
-    df_merged = df.merge(df_accounts, left_on='user', right_on='username', how='left', indicator=True).astype('object')
+    # Create ind variable: if reply_id is null, False else True
+    df['is_reply'] = np.where(pd.isnull(df.reply_id), 'False', 'True')
 
-    return df_merged
+    # If team_choice "All ", dont filter else filter by selected teams + Kraken
+    if 'All' not in team_choice:
+        team_choice.append("SEA") # always include Kraken
+        boolean_series = df.nhl_team_abbr.isin(team_choice) # list to filter by
+        df = df[boolean_series] # filter df_sentiment by list
+        #msg1 = "Filtered list of NHL teams"
 
+    return df
+
+# Function 4b: 
+#----------------
+# INSIDERS: takes in user selections and filters out the df accordingly
+# this is an input to the topic model
+# filter based on df_sentiment?
+
+# df 1 = df_sentiment (has dups, has team classifications)
+def filter_insider_rows(team_choice, rt_choice, reply_choice, account_choice, df):
+    
+    # Select columns from text_sentiment
+    df = df[['id', 'user', 'created_at',  'is_rt', 'reply_id', 'company', 'account_type', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
+
+    # Create ind variable: if reply_id is null, False else True
+    df['is_reply'] = np.where(pd.isnull(df.reply_id), 'False', 'True')
+
+    # If team_choice "All ", dont filter else filter by selected teams + Kraken
+    if 'All' not in team_choice:
+        team_choice.append("SEA") # always include Kraken
+        boolean_series = df.nhl_team_abbr.isin(team_choice) # list to filter by
+        df = df[boolean_series] # filter df_sentiment by list
+        #msg1 = "Filtered list of NHL teams"
+
+    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
+    if account_choice == 'Both':
+        df = df
+        msg2 = "All Hockey Insiders (Analytics & Reporters)"
+    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
+    elif account_choice == 'Hockey Analytics':
+        df = df.loc[df['account_type'] == 'analytics']# filter df_sentiment by list
+        msg2 = "Only Hockey Analytics accounts"
+    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
+    elif account_choice == 'Hockey Reporters':
+        df = df.loc[df['account_type'] == 'insider']# filter df_sentiment by list
+        msg2 = "Only Hockey Reporter accounts"
+    
+    # If rt choice is false, dont filter else filter by selected teams + Kraken
+    if rt_choice == 'Yes':
+        df = df
+        msg3 = "Retweets included"
+    # No selection
+    elif rt_choice == 'No':
+        df = df[df['full_text'].str.contains("RT") == False] # filter out rows that contain with RT
+        msg3 = "Retweets not included"
+
+    # If reply choice is false, only select rows where reply is false
+    if reply_choice == 'Yes':
+        df = df
+        msg4 = "Replies included "
+    # No selection
+    elif reply_choice == 'No':
+        df = df.loc[df['is_reply'] == 'False']# filter df_sentiment by list
+        msg4 = "Retweets mpt included"
+
+    return df, msg2,  msg3, msg4
 
 
 # Function 5a: 
@@ -377,10 +439,8 @@ def classify_nhl_team(df):
 
 def classify_nhl_team_insider(df1):
 
-     # Get list of Twitter accounts
-    df_accounts = pd.read_csv('assets/nhl_app_accounts.csv')
-    # Remove @ from username
-    df_accounts['username'] = df_accounts['account_id'].str.replace("@", "")
+    # Bring in pre-loaded data on accounts
+    df_accounts = accounts
 
     # Extend df_clean by joining in data about the account
     df = df1.merge(df_accounts, left_on='user', right_on='username', how='left', indicator=True).astype('object')
@@ -505,6 +565,22 @@ def classify_nhl_team_insider(df1):
 
 
 # Function 6
+#-----------------
+def create_topics_df(df1, df2):
+    # where df1 = dataframe that has been classified with NHL teams but has duplicate rows
+    # where df2 = dataframe that has been groomed for text analysis, has no dups, and no NHL teams classification
+    # logic = filter IDs in df2 by df1 to ensure user input is filtering the dataset for topic modeling & wordcloud
+
+    id_keep_list = df1.id.tolist()
+    filter_series = df2.id.isin(id_keep_list) # list to filter by
+    df_topics = df2[filter_series] # filter df_sentiment by list 
+
+    #df_topics2 = pd.merge(df1, df_topics[['id', 'sentiment','compound_score', 'positive_score', 'neutral_score','negative_score']], on = 'id', how = 'inner', indicator = True).astype("object")
+
+    return df_topics
+
+
+# Function... not used (but, kept for nowas it can be used later)!
 #-----------------
 def feature_extract(df):
     #TODO: add emoticons and emojis to this! and other punctuation
@@ -970,6 +1046,6 @@ def load_fan_message(user_num_tweets):
 #----------------
 def load_insider_message(total_tweets):
     tweets_num = str(total_tweets)
-    st.success('🎈Done! We got you  ' +
+    st.success('🎈Done! After filtering, we got you  ' +
                 tweets_num +
                 ' tweets from NHL Insiders in the last 48h')

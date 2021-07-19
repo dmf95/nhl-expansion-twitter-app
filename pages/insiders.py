@@ -60,7 +60,7 @@ def app():
             team_choice = st.multiselect('1. Filter by specifc NHL Team(s)?', team_cols, default = 'All', help = 'Remove and replace `All` with other NHL team(s)')
             #company_cols = ['All', 'DFO Hockey', 'EPRinkside', 'Freelance', 'HNIC', 'Hockey Data', 'Sportsnet', 'The Athletic', 'TSN']
             #company_choice = st.multiselect('2. Filter by specific Sports Station(s)?', options = company_cols, default = 'All', help = 'Remove and replace `All` with other Sports Station(s)')
-            account_choice = st.selectbox('2. Include Hockey Analytics & Reporters?', options = ['Both', 'Hockey Analytics', 'Hockey Reporter'], help = 'Select `Hockey Analytics` or `NHL Insiders` to filter tweets')
+            account_choice = st.radio('2. Include Hockey Analytics & Reporters?', options = ['Both', 'Hockey Analytics', 'Hockey Reporters'], help = 'Select `Hockey Analytics` or `Hockey Reporters` to filter tweets')
             rt_choice = st.radio('3. Include Retweets?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `retweets`')
             reply_choice = st.radio('4. Include Replies?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `replies`')
             st.sidebar.text("") # spacing
@@ -112,43 +112,19 @@ def app():
     # Add sentiment classification
     text_sentiment = nf.sentiment_classifier(df_nhl, 'compound_score')
 
-    # Select columns from text_sentiment
-    df_sentiment = text_sentiment[['id', 'user', 'created_at',  'is_rt', 'reply_id', 'company', 'account_type', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
+    # User input filter on df_sentiment
+    df_sentiment, msg2, msg3, msg4 = nf.filter_insider_rows(team_choice, rt_choice, reply_choice, account_choice, text_sentiment)
+      
+    # Combine original dataset that has text cleaning (df_tweets) with the classified data with dups (df_sentiment)
+    # Take important columns, remove any dups
+    df_topics = pd.merge(df_tweets, df_sentiment[['id', 'sentiment','compound_score', 'positive_score', 'neutral_score','negative_score']], on = 'id', how = 'inner', indicator = True).astype("object")
+    df_topics.drop_duplicates(subset ="id", keep = "first", inplace = True)
     
-     # Create ind variable: if reply_id is null, False else True
-    df_sentiment['is_reply'] = np.where(pd.isnull(df_sentiment.reply_id), 'False', 'True')
-
-    # If team_choice "All ", dont filter else filter by selected teams + Kraken
-    if 'All' not in team_choice:
-        team_choice.append("SEA") # always include Kraken
-        boolean_series = df_sentiment.nhl_team_abbr.isin(team_choice) # list to filter by
-        df_sentiment = df_sentiment[boolean_series] # filter df_sentiment by list
-
-    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
-    #if 'All' not in company_choice:
-    #    boolean_series2 = df_sentiment.company.isin(company_choice) # list to filter by
-    #    df_sentiment = df_sentiment[boolean_series2] # filter df_sentiment by list
-    
-    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
-    if account_choice == 'Hockey Analytics':
-        df_sentiment = df_sentiment.loc[df_sentiment['account_type'] == 'analytics']# filter df_sentiment by list
-    
-    # If company_choice choice "All", dont filter else filter by selected teams + Kraken
-    if account_choice == 'Hockey Reporter':
-        df_sentiment = df_sentiment.loc[df_sentiment['account_type'] == 'reporter']# filter df_sentiment by list
-    
-    # If rt choice is false, dont filter else filter by selected teams + Kraken
-    if rt_choice == 'Yes':
-        df_sentiment = df_sentiment
-    elif rt_choice == 'No':
-        df_sentiment = df_sentiment[df_sentiment['full_text'].str.contains("RT") == False] # filter out rows that contain with RT
-
-    # If reply choice is false, only select rows where reply is false
-    if reply_choice == 'Yes':
-        df_sentiment = df_sentiment
-    elif reply_choice == 'No':
-        df_sentiment = df_sentiment.loc[df_sentiment['is_reply'] == 'False']# filter df_sentiment by list
-    
+    # Needed to convert some objects back into float (others too but they aren't being used)
+    df_topics["compound_score"] = df_topics.compound_score.astype(float)
+    df_topics["positive_score"] = df_topics.positive_score.astype(float)
+    df_topics["neutral_score"] = df_topics.neutral_score.astype(float)
+    df_topics["negative_score"] = df_topics.negative_score.astype(float)
 
     # Sentiment group dataframe
     expansion_group2, team_group2, kraken, kraken_total, kraken_negative, kraken_neutral, kraken_positive, rol, rol_total, rol_negative, rol_neutral, rol_positive, unknown, unknown_total, unknown_negative, unknown_negative, unknown_neutral, unknown_positive = nf.group_nhl_data(df_sentiment)
@@ -157,7 +133,8 @@ def app():
 
     # 3.2: Define Key Variables
     #------------------------------------#
-    total_tweets = len(df_original['full_text'])
+    orig_total_tweets = len(df_original['id'])
+    total_tweets = len(df_topics['id']) # total after filtering (unique tweets)
     match_tweets = len(df_match['full_text'])
     nomatch_tweets = len(df_nomatch['full_text'])
 
@@ -335,7 +312,12 @@ def app():
 
     ## 4.3.3: Plot wordcloud
     ##----------------------------------##
-    nf.plot_wordcloud(submitted2, score_type, df_sentiment, wordcloud_words, top_n_tweets)
+    
+    # Turn user selection from float to integer
+    top_n_tweets = int(top_n_tweets)
+    wordcloud_words  = int(wordcloud_words)
+
+    nf.plot_wordcloud(submitted2, score_type, df_topics, wordcloud_words, top_n_tweets)
 
 
     ## 4.3.4: Plot top tweets
@@ -364,7 +346,7 @@ def app():
         score_nickname = 'Negative'
 
     # Run the top n tweets
-    top_tweets_res = nf.print_top_n_tweets(df_sentiment, score_type_nm, top_n_tweets)
+    top_tweets_res = nf.print_top_n_tweets(df_topics, score_type_nm, top_n_tweets)
 
    # Conditional title
     str_num_tweets = str(top_n_tweets)
@@ -525,10 +507,9 @@ def app():
     ##----------------------------------##
 
     # Define data variable
-    data = df_tweets['clean_text']
+    data = df_topics.clean_text
 
     topic_view_option = topic_expander.radio('Choose display options', ('Default view', 'Analyst view (advanced options)'))
-
 
     if topic_view_option == 'Default view':
         # Topic model expander form submit for topic model table & visual
@@ -536,6 +517,10 @@ def app():
             number_of_topics = st.number_input('Choose the number of topics. Start with a larger number and decrease if you see topics that are similar.',min_value=1, value=5)
             no_top_words = st.number_input('Choose the number of words in each topic you want to see.',min_value=1, value=5)
             submitted3 = st.form_submit_button('Regenerate topics', help = 'Re-run topic model analysis with the current inputs')
+        
+        number_of_topics = int(top_n_tweets)
+        no_top_words = int(no_top_words)
+        
         df_lda = nf.lda_topics(data, number_of_topics, no_top_words, 0.1, 0.9)
         nf.print_lda_keywords(df_lda, number_of_topics)
     else:
@@ -545,6 +530,11 @@ def app():
             min_df = st.number_input('Ignore words that appear less than the specified proportion (decimal number between 0 and 1).',min_value=0.0, max_value=1.0, value=0.1)
             max_df = st.number_input('Ignore words that appear more than the specified proportion (decimal number between 0 and 1).',min_value=0.0, max_value=1.0, value=0.9)
             submitted3 = st.form_submit_button('Regenerate topics', help = 'Re-run topic model analysis with the current inputs')
+        
+        number_of_topics = int(top_n_tweets)
+        no_top_words = int(no_top_words)
         df_lda = nf.lda_topics(data, number_of_topics, no_top_words, min_df, max_df)
         st.write('Weights shown in brackets represent how important the word is to each topic')
         nf.print_lda_keywords_weight(df_lda, number_of_topics)
+
+     

@@ -302,11 +302,16 @@ def app():
         score_type = st.selectbox('Select sentiment', ['All', 'Positive', 'Neutral', 'Negative'])
         wordcloud_words = st.number_input('Choose the max number of words for the word cloud', 15)
         top_n_tweets =  st.number_input('Choose the top number of tweets *', 3)
-        submitted2 = st.form_submit_button('Regenerate Wordcloud', help = 'Re-run the Wordcloud with the current inputs')
+        submitted2 = st.form_submit_button('Regenerate Wordcloud', help = 'Re-run the Wordcloud with the current inputs')    
 
 
     ## 4.3.3: Plot wordcloud
     ##----------------------------------##
+    
+    # Turn user selection from float to integer
+    top_n_tweets = int(top_n_tweets)
+    wordcloud_words  = int(wordcloud_words)
+    
     nf.plot_wordcloud(submitted2, score_type, df_sentiment, wordcloud_words, top_n_tweets)
 
 
