@@ -1,21 +1,21 @@
-﻿account_id,name,account_type,company
-@TSNBobMcKenzie,Bob McKenzie,insider,TSN
-@FriedgeHNIC,Elliotte Friedman,insider,HNIC
-@PierreVLeBrun,Pierre Lebrun,insider,TSN
-@DarrenDreger,Darren Dreger,insider,TSN
-@CraigJButton,Craig Button,insider,TSN
-@reporterchris,Chris Johnston,insider,HNIC
-@JeffMarek,Jeff Marek,insider,Sportsnet
-@SportsnetSpec,Mark Spector,insider,Sportsnet
-@frank_seravalli,Frank Seravelli,insider,DFO Hockey
-@EvolvingHockey,Evolving Hockey,analytics,Freelance
-@IneffectiveMath,Micah Blake McCurdy,analytics,Freelance
-@JFreshHockey,Jfresh,analytics,EP Rinkside
-@TopDownHockey,Patrick Bacon,analytics,Freelance
-@GarretHohl,Garret Hohl,analytics,Hockey Data
-@Thats_Offside,Rhys Jessop,analytics,Freelance
-@hayyyshayyy,Shayna,analytics,Freelance
-@AlisonL,Alison Lukan,analytics,The Athletic
-@yolo_pinyato,DJ Bodega Cat,analytics,Freelance
-@domluszczyszyn,Dom at the athletic,analytics,The Athletic
-@TheAthleticNHL,The Athletic NHL,insider,The Athletic
+﻿account_id,name,account_type,company,,,,
+@TSNBobMcKenzie,Bob McKenzie,insider,TSN,,,,
+@FriedgeHNIC,Elliotte Friedman,insider,HNIC,,,,
+@PierreVLeBrun,Pierre Lebrun,insider,TSN,,,,
+@DarrenDreger,Darren Dreger,insider,TSN,,,,
+@CraigJButton,Craig Button,insider,TSN,,,,
+@reporterchris,Chris Johnston,insider,HNIC,,,,
+@JeffMarek,Jeff Marek,insider,Sportsnet,,,,
+@SportsnetSpec,Mark Spector,insider,Sportsnet,,,,
+@frank_seravalli,Frank Seravelli,insider,DFO Hockey,,,,
+@EvolvingHockey,Evolving Hockey,analytics,Freelance,,,,
+@IneffectiveMath,Micah Blake McCurdy,analytics,Freelance,,,,
+@JFreshHockey,Jfresh,analytics,EP Rinkside,,,,
+@TopDownHockey,Patrick Bacon,analytics,Freelance,,,,
+@GarretHohl,Garret Hohl,analytics,Hockey Data,,,,
+@Thats_Offside,Rhys Jessop,analytics,Freelance,,,,
+@hayyyshayyy,Shayna,analytics,Freelance,,,,
+@AlisonL,Alison Lukan,analytics,The Athletic,,,,
+@wyshynski,Greg Wyshynski,insider,ESPN,,,,
+@domluszczyszyn,Dom at the athletic,analytics,The Athletic,,,,
+@TheAthleticNHL,The Athletic NHL,insider,The Athletic,,,,

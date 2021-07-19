@@ -226,6 +226,69 @@ def insider_recent_tweets():
     return pd.DataFrame(df_user_tweets)
 
 
+# Function 3c
+#----------------
+# Function to create dataframe of most recent 400 tweets from a specific user
+def search_insider_tweets(num_of_tweets):
+
+    with st.spinner('Getting NHL Insider data from Twitter...'):
+
+        #Twitter only allows access to a users most recent 3240 tweets with this method
+        #Adapted by: https://gist.github.com/yanofsky/5436496?fbclid=IwAR12gb56FOxTNI6R3SfiwpnbPpTvKLoeGR3kP0peQ1nGilcwsF8bR0LSVqE
+        
+        # Set up Twitter API access
+        # Define access keys and tokens
+        consumer_key = st.secrets['consumer_key']
+        consumer_secret = st.secrets['consumer_secret']
+        access_token = st.secrets['access_token']
+        access_token_secret = st.secrets['access_token_secret']
+
+        auth = tw.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        api = tw.API(auth, wait_on_rate_limit = True)
+
+        # List of accounts we want to query
+        # https://developer.twitter.com/en/docs/twitter-api/v1/rules-and-filtering/search-operators
+        user_word = f'from:@TSNBobMcKenzie OR from:@FriedgeHNIC OR from:@PierreVLeBrun OR from:@DarrenDreger OR from:@CraigJButton OR from:@reporterchris OR from:@JeffMarek OR from:@SportsnetSpec OR from:@frank_seravalli OR from:@EvolvingHockey OR from:@IneffectiveMath OR from:@JFreshHockey OR from:@TopDownHockey OR from:@GarretHohl OR from:@Thats_Offside OR from:@hayyyshayyy OR from:@AlisonL OR from:@wyshynski OR from:@domluszczyszyn OR from:@TheAthleticNHL'
+
+        # Filter out retweets
+        user_word = user_word + ' -filter:retweets'
+        # The following is based on user language selection
+
+        # English tweets only
+        language = 'en'
+
+        # number_of_tweets
+        num_of_tweets = int(num_of_tweets)
+
+        # Run search using defined params
+        tweets = tw.Cursor(api.search,
+                                q = user_word,
+                                tweet_mode = "extended",
+                                lang = language).items(num_of_tweets)
+
+        # Store as dataframe
+        tweet_metadata = [[tweet.created_at, tweet.id, tweet.full_text, tweet.user.screen_name, tweet.retweet_count, tweet.favorite_count, tweet.user.followers_count, tweet.user.verified, tweet.in_reply_to_status_id] for tweet in tweets]    
+        df_tweets = pd.DataFrame(data=tweet_metadata, columns=['created_at', 'id', 'full_text', 'user', 'rt_count', 'fav_count', 'follower_ct', 'verified', 'reply_id'])
+
+
+        # Create a new text variable to do manipulations on 
+        df_tweets['clean_text'] = df_tweets.full_text
+        df_tweets['is_rt'] = 0
+        #df_tweets['reply_id'] = ''
+
+        # Create a tidy dataframe to later display to users 
+        df_new = df_tweets[["created_at", "full_text", "user", "rt_count", "fav_count", "follower_ct", "verified"]]
+        df_new = df_new.rename(columns = {"created_at": "Date", 
+                                        "full_text": "Tweet", 
+                                        "user": "Username", 
+                                        "rt_count": "Retweets",  
+                                        "fav_count": "Favourites",
+                                        "follower_ct": "Followers",
+                                        "verified": "Verified"})
+    return df_tweets, df_new
+
+
 # Function 4a: 
 #----------------
 # INSIDERS: takes in user selections and filters out the df accordingly
@@ -261,7 +324,7 @@ def filter_fan_rows(team_choice, mult_choice, df):
 
 
 # df 1 = df_sentiment (has dups, has team classifications)
-def filter_insider_rows(team_choice, rt_choice, reply_choice, account_choice, df):
+def filter_insider_rows(team_choice, reply_choice, account_choice, df):
     
     # Select columns from text_sentiment
     df = df[['id', 'user', 'created_at',  'is_rt', 'reply_id', 'company', 'account_type', 'nhl_team_abbr', 'nhl_team', 'multiple_teams', 'expansion_type', 'full_text', 'clean_text', 'sentiment', 'positive_score', 'negative_score', 'neutral_score', 'compound_score']]
@@ -290,13 +353,13 @@ def filter_insider_rows(team_choice, rt_choice, reply_choice, account_choice, df
         msg2 = "Only Hockey Reporter accounts"
     
     # If rt choice is false, dont filter else filter by selected teams + Kraken
-    if rt_choice == 'Yes':
-        df = df
-        msg3 = "Retweets included"
+    #if rt_choice == 'Yes':
+    #    df = df
+    #    msg3 = "Retweets included"
     # No selection
-    elif rt_choice == 'No':
-        df = df[df['full_text'].str.contains("RT") == False] # filter out rows that contain with RT
-        msg3 = "Retweets not included"
+    #elif rt_choice == 'No':
+    #    df = df[df['full_text'].str.contains("RT") == False] # filter out rows that contain with RT
+    #    msg3 = "Retweets not included"
 
     # If reply choice is false, only select rows where reply is false
     if reply_choice == 'Yes':
@@ -307,7 +370,7 @@ def filter_insider_rows(team_choice, rt_choice, reply_choice, account_choice, df
         df = df.loc[df['is_reply'] == 'False']# filter df_sentiment by list
         msg4 = "Retweets mpt included"
 
-    return df, msg2,  msg3, msg4
+    return df, msg2, msg4
 
 
 # Function 5a: 
