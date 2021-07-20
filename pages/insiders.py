@@ -63,6 +63,7 @@ def app():
             account_choice = st.radio('2. Include Hockey Analytics & Reporters?', options = ['Both', 'Hockey Analytics', 'Hockey Reporters'], help = 'Select `Hockey Analytics` or `Hockey Reporters` to filter tweets')
             #rt_choice = st.radio('3. Include Retweets?', options = ['No', 'Yes'], help = 'Change to `Yes` if you want to include `retweets`')
             reply_choice = st.radio('3. Include Replies?', options = ['Yes', 'No'], help = 'Change to `No` if you want to exclude `replies`')
+            #num_of_tweets = st.number_input('4. Change the number of tweets?', min_value=100, max_value=10000, value = 500, step = 100, help = 'Increase or decrease the number of tweets to return. Returns in order of recency, maxes out at 10k tweets, or 7 elapsed days')
             st.sidebar.text("") # spacing
             submitted1 = st.form_submit_button(label = 'Re-Run Draft Analyzer', help = 'Re-run analyzer with the current inputs')
 
@@ -86,8 +87,8 @@ def app():
             time.sleep(3)
 
     # Run function 3: Get recent tweets for each insider account
-    #df_tweets = nf.insider_recent_tweets() # uses timeline api
-    df_tweets, df_new = nf.search_insider_tweets(num_of_tweets=1000) # uses search api
+    df_tweets = nf.insider_recent_tweets() # uses timeline api
+    #df_tweets, df_new = nf.search_insider_tweets(num_of_tweets) # uses search api
 
     # Run function 5b: Get classified nhl teams data    
     df_nhl, df_original, df_match, df_nomatch = nf.classify_nhl_team_insider(df_tweets)

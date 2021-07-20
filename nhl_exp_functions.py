@@ -193,6 +193,9 @@ def get_user_tweets(screen_name):
         # Create a new text variable to do manipulations on 
         df_itweets['clean_text'] = df_itweets.full_text
 
+        # Filter out retweets
+        df_itweets = df_itweets[df_itweets['full_text'].str.contains("RT") == False] # filter out rows that contain with RT
+
     return df_itweets
 
 
@@ -222,6 +225,7 @@ def insider_recent_tweets():
 
     # Reset dataframe index
     df_user_tweets = df_user_tweets.reset_index(drop=True)
+
 
     return pd.DataFrame(df_user_tweets)
 
@@ -286,6 +290,7 @@ def search_insider_tweets(num_of_tweets):
                                         "fav_count": "Favourites",
                                         "follower_ct": "Followers",
                                         "verified": "Verified"})
+        
     return df_tweets, df_new
 
 
@@ -353,11 +358,11 @@ def filter_insider_rows(team_choice, reply_choice, account_choice, df):
         msg2 = "Only Hockey Reporter accounts"
     
     # If rt choice is false, dont filter else filter by selected teams + Kraken
-    #if rt_choice == 'Yes':
+    # if rt_choice == 'Yes':
     #    df = df
     #    msg3 = "Retweets included"
     # No selection
-    #elif rt_choice == 'No':
+    # elif rt_choice == 'No':
     #    df = df[df['full_text'].str.contains("RT") == False] # filter out rows that contain with RT
     #    msg3 = "Retweets not included"
 
@@ -1115,4 +1120,4 @@ def load_insider_message(total_tweets):
     tweets_num = str(total_tweets)
     st.success('🎈Done! After filtering, we got you  ' +
                 tweets_num +
-                ' tweets from NHL Insiders in the last 48h')
+                ' tweets from NHL Insiders')
