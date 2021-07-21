@@ -87,7 +87,7 @@ def twitter_get_nhl(num_of_tweets):
 
         # Define search terms
         # https://developer.twitter.com/en/docs/twitter-api/v1/rules-and-filtering/search-operators
-        user_word = f'expansion draft OR expansiondraft'
+        user_word = f'expansion draft OR expansiondraft OR kraken'
 
         # Filter out retweets
         user_word = user_word + ' -filter:retweets'
