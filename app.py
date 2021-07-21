@@ -10,7 +10,7 @@
 #--------------------------------------------------
 import streamlit as st
 from PIL import Image
-from pages import readme ,fans, insiders
+from pages import readme ,fans, insiders, search
 from app_multipage import multi_app # import your app modules here
 #~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-=~-
 
@@ -58,6 +58,8 @@ app = multi_app() # Load app_multipage.py class functions
 app.add_app("Read Me", readme.app)
 app.add_app("NHL Fans", fans.app)
 app.add_app("NHL Insiders", insiders.app)
+app.add_app("Custom Search", search.app)
+
 
 app.run() # Run the main app
 

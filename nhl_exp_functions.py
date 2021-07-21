@@ -65,7 +65,7 @@ def get_table_download_link(df):
     href = f'<a href="data:file/csv;base64,{b64}" download="tweets.csv">Download Raw Data CSV file</a>'
     return href
 
-# Function 2: 
+# Function 2a: 
 #----------------
 # Hit twitter api & add basic features & output 2 dataframes
 # @st.cache(suppress_st_warning=True,allow_output_mutation=True)
@@ -126,6 +126,69 @@ def twitter_get_nhl(num_of_tweets):
                                         "follower_ct": "Followers",
                                         "verified": "Verified"})
     return df_tweets, df_new
+
+# Function 2b: 
+#----------------
+# Hit twitter api & add basic features & output 2 dataframes
+# @st.cache(suppress_st_warning=True,allow_output_mutation=True)
+def twitter_search_nhl(user_word_entry, num_of_tweets):  
+    
+    with st.spinner('Running your search query to get data from Twitter...'):
+
+        # Set up Twitter API access
+        # Define access keys and tokens
+        consumer_key = st.secrets['consumer_key']
+        consumer_secret = st.secrets['consumer_secret']
+        access_token = st.secrets['access_token']
+        access_token_secret = st.secrets['access_token_secret']
+
+        # Tweepy auth handler
+        auth = tw.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        api = tw.API(auth, wait_on_rate_limit = True)
+
+        # Define search terms
+        # https://developer.twitter.com/en/docs/twitter-api/v1/rules-and-filtering/search-operators
+        user_word = f'{user_word_entry}'
+
+        # Filter out retweets
+        user_word = user_word + ' -filter:retweets'
+        # The following is based on user language selection
+
+        # English tweets only
+        language = 'en'
+
+        # Run search using defined params
+        tweets = tw.Cursor(api.search,
+                                q = user_word,
+                                tweet_mode = "extended",
+                                lang = language).items(num_of_tweets)
+
+        # Store as dataframe
+        tweet_metadata = [[tweet.created_at, tweet.id, tweet.full_text, tweet.user.screen_name, tweet.retweet_count, tweet.favorite_count, tweet.user.followers_count, tweet.user.verified] for tweet in tweets]    
+        df_tweets = pd.DataFrame(data=tweet_metadata, columns=['created_at', 'id', 'full_text', 'user', 'rt_count', 'fav_count', 'follower_ct', 'verified'])
+
+        # Add a new data variable
+        df_tweets['created_dt'] = df_tweets['created_at'].dt.date
+
+        # Add a new time variable
+        df_tweets['created_time'] = df_tweets['created_at'].dt.time
+
+        # Create a new text variable to do manipulations on 
+        df_tweets['clean_text'] = df_tweets.full_text
+
+        # Create a tidy dataframe to later display to users 
+        df_new = df_tweets[["created_dt", "created_time", "full_text", "user", "rt_count", "fav_count", "follower_ct", "verified"]]
+        df_new = df_new.rename(columns = {"created_dt": "Date", 
+                                        "created_time": "Time", 
+                                        "full_text": "Tweet", 
+                                        "user": "Username", 
+                                        "rt_count": "Retweets",  
+                                        "fav_count": "Favourites",
+                                        "follower_ct": "Followers",
+                                        "verified": "Verified"})
+    return df_tweets, df_new
+
 
 
 # Function 3a
@@ -627,7 +690,7 @@ def classify_nhl_team_insider(df1):
     df_clean = melted_df.append(df_nomatch)
 
     # Show a few rows of data
-    df_clean.head(5)
+    #df_clean.head(5)
     #print('total rows:', len(df_clean),'melted_rows:', (len(melted_df)), 'nomatch_rows:', len(df_nomatch))
 
     # Extend df_clean by joining in data about the team
