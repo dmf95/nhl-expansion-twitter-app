@@ -19,7 +19,7 @@
  
 ### Purpose
 
-The ~~glorious~~ purpose of this project is to **estimate sentiment** from NHL fans and insiders on Twitter during the Seattle Kraken's 2022 **NHL Expansion Draft**.
+The ~~glorious~~ purpose of this project is to **estimate sentiment** from NHL fans and insiders on Twitter during the Seattle Kraken's 2021 **NHL Expansion Draft**.
 
 ### Brief
 
